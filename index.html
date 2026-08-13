@@ -1919,8 +1919,11 @@
             onlineUsersList.innerHTML = '';
             
             let currentTime = Date.now();
-            let onlineUsers = users.filter(u => !bannedList.includes(u.name) && !blockedList.includes(u.name) && (currentTime - (u.lastActive || 0) < 15000));
-            let offlineUsers = users.filter(u => !bannedList.includes(u.name) && !blockedList.includes(u.name) && (currentTime - (u.lastActive || 0) >= 15000));
+            let onlineUsers = users.filter(u => !bannedList.includes(u.name) && !blockedList.includes(u.name) && (currentTime - (u.lastActual || u.lastActive || 0) < 15000));
+            
+            // لتحديث القائمة بشكل أسرع وأدق للزوار الجدد:
+            onlineUsers = users.filter(u => !bannedList.includes(u.name) && !blockedList.includes(u.name) && (currentTime - (u.lastActive || 0) < 20000));
+            let offlineUsers = users.filter(u => !bannedList.includes(u.name) && !blockedList.includes(u.name) && (currentTime - (u.lastActive || 0) >= 20000));
 
             onlineCountBadge.textContent = onlineUsers.length;
             totalCountBadge.textContent = users.length;
