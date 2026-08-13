@@ -220,10 +220,9 @@
             display: flex;
             align-items: center;
             gap: 5px;
-            position: relative; /* مهم لتموضع شارة الأرقام الحمراء فوق الزر */
+            position: relative;
         }
         
-        /* شارة الأرقام الحمراء لإشعارات المنشن */
         .notif-badge-counter {
             position: absolute;
             top: -6px;
@@ -235,7 +234,7 @@
             padding: 2px 6px;
             border-radius: 50px;
             box-shadow: 0 2px 6px rgba(239, 68, 68, 0.5);
-            display: none; /* مخفي افتراضياً حتى يوجد منشن */
+            display: none;
             animation: bounceIn 0.3s ease;
         }
         .notif-badge-counter.active {
@@ -424,7 +423,6 @@
             color: var(--primary-color);
         }
 
-        /* زر العودة (Back button) للصفحة الخاصة */
         .back-to-general-btn {
             background: rgba(239, 68, 68, 0.1);
             border: 1px solid rgba(239, 68, 68, 0.3);
@@ -468,6 +466,19 @@
 
         .my-profile-btn:hover span {
             color: white !important;
+        }
+
+        /* تنسيق الروابط داخل الرسائل لكي تكون قابلة للنقر */
+        .message a {
+            color: #38bdf8;
+            text-decoration: underline;
+            word-break: break-all;
+        }
+        .message.incoming a {
+            color: #0284c7;
+        }
+        .message a:hover {
+            opacity: 0.8;
         }
 
         /* صندوق الرسائل */
@@ -518,19 +529,6 @@
             color: white;
             align-self: flex-end;
             border-top-right-radius: 3px;
-        }
-
-        .mention-tag {
-            background: rgba(2, 132, 199, 0.2);
-            color: var(--primary-color);
-            padding: 2px 6px;
-            border-radius: 6px;
-            font-weight: bold;
-            display: inline-block;
-        }
-        .message.outgoing .mention-tag {
-            background: rgba(255, 255, 255, 0.25);
-            color: #ffffff;
         }
 
         .reply-quote-box {
@@ -645,11 +643,6 @@
             margin-top: 8px;
         }
 
-        .msg-audio {
-            margin-top: 8px;
-            width: 240px;
-        }
-
         .mention-dropdown {
             position: absolute;
             bottom: 85px;
@@ -667,20 +660,6 @@
         }
         .mention-dropdown.active {
             display: block;
-        }
-        .mention-item {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 8px 12px;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: 0.2s;
-            font-size: 0.9em;
-        }
-        .mention-item:hover {
-            background: rgba(2, 132, 199, 0.1);
-            color: var(--primary-color);
         }
 
         .reply-preview-bar {
@@ -736,18 +715,6 @@
             color: white;
             transform: scale(1.1) translateZ(10px);
             box-shadow: 0 8px 20px var(--glow-color);
-        }
-
-        .mic-btn.recording {
-            background: #dc2626;
-            color: white;
-            animation: pulseRec 1.2s infinite;
-        }
-
-        @keyframes pulseRec {
-            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7); }
-            70% { transform: scale(1.1); box-shadow: 0 0 0 12px rgba(220, 38, 38, 0); }
-            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
         }
 
         .chat-input {
@@ -1091,7 +1058,6 @@
         <div class="chat-main">
             <div class="chat-header">
                 <div class="chat-room-title" id="chatRoomTitleText">
-                    <!-- زر الرجوع للصفحة العامة (Back) -->
                     <button class="back-to-general-btn" id="backToGeneralBtn" onclick="exitPrivateChat()">
                         <i class="fa-solid fa-arrow-right"></i> Back (رجوع)
                     </button>
@@ -1119,8 +1085,7 @@
 
                 <input type="file" id="fileInput" accept="image/*,video/*" style="display: none;">
                 <button type="button" class="attach-btn" id="attachBtn" title="رفع صورة أو فيديو"><i class="fa-solid fa-paperclip"></i></button>
-                <button type="button" class="mic-btn" id="micBtn" title="تسجيل رسالة صوتية"><i class="fa-solid fa-microphone"></i></button>
-                <input type="text" id="messageInput" class="chat-input" placeholder="" autocomplete="off">
+                <input type="text" id="messageInput" class="chat-input" placeholder="اكتب رسالتك هنا..." autocomplete="off">
                 <button type="button" class="send-btn" id="sendBtn" title="إرسال"><i class="fa-solid fa-paper-plane"></i></button>
             </div>
         </div>
@@ -1128,7 +1093,6 @@
         <div class="sidebar">
             <div class="sidebar-header">
                 <span><i class="fa-solid fa-shield-halved"></i> المتواجدون</span>
-                <!-- زر الإشعارات مع شارة الأرقام الحمراء -->
                 <button class="notifications-top-btn" id="openNotificationsBtn">
                     <i class="fa-solid fa-bell"></i> الإشعارات
                     <span class="notif-badge-counter" id="notifBadgeCounter">0</span>
@@ -1154,7 +1118,7 @@
         </div>
     </div>
 
-    <!-- نافذة الملف الشخصي مع زر المحادثة الخاصة وخيار الحظر (Block) -->
+    <!-- نافذة الملف الشخصي -->
     <div class="profile-modal" id="profileModal">
         <div class="profile-card">
             <button class="profile-close-btn" id="closeProfileBtn"><i class="fa-solid fa-xmark"></i></button>
@@ -1179,7 +1143,6 @@
                 <input type="text" id="editBioInput" class="profile-input" placeholder="اكتب نبذة عنك...">
             </div>
 
-            <!-- أزرار التفاعل مع المستخدمين الآخرين -->
             <button class="setup-btn" id="startPrivateChatBtn" style="background: linear-gradient(135deg, #10b981, #059669); margin-bottom: 10px; display: none;"><i class="fa-solid fa-comment-dots"></i> محادثة على الخاص</button>
             <button class="setup-btn" id="toggleBlockUserBtn" style="background: linear-gradient(135deg, #ef4444, #b91c1c); margin-bottom: 10px; display: none;"><i class="fa-solid fa-user-slash"></i> حظر المستخدم (Block)</button>
             
@@ -1205,21 +1168,7 @@
     </div>
 
     <script>
-        const badWords = [
-            "احا", "احااه", "عرص", "عرس", "متناكة", "متناكه", "منيوك", "منيوكه", "قحبة", "قحبه", "شرموط", "شرموطه", "شرموطة", 
-            "كس امك", "كسمك", "كسختك", "كسخت", "منيكة", "منيكه", "نيك", "ينيك", "تناك", "ينعن", "يلعن", "كلب", "حمار", "غبي", 
-            "وسخ", "وسخه", "وسخة", "خرا", "قذر", "قذره", "زبي", "زبى", "خول", "خولات", "الخول", "ديوث", "الديوث",
-            "fuck", "fucker", "fucking", "fucked", "shitty", "shit", "bitch", "bitches", "asshole", "assholes", 
-            "dick", "dicks", "bastard", "bastards", "cunt", "cunts", "pussy", "pussies", "slut", "sluts", 
-            "whore", "whores", "faggot", "fag", "idiot", "idiots", "stfu", "kys", "motherfucker"
-        ];
-
-        function containsBadWord(text) {
-            let lowerText = text.toLowerCase();
-            return badWords.some(word => lowerText.includes(word));
-        }
-
-        const chatChannel = new BroadcastChannel('craftino_3d_chat_channel');
+        const chatChannel = new BroadcastChannel('craftino_3d_shared_chat_channel');
         
         let currentUser = {
             name: '',
@@ -1238,6 +1187,7 @@
 
         let currentReplyingTo = null;
         let currentPrivateChatWith = null; 
+        let messageTimestamps = []; // لتتبع السبام
 
         function getMyBlockedUsers() {
             let allBlocks = JSON.parse(localStorage.getItem('craftino_personal_blocks')) || {};
@@ -1254,10 +1204,8 @@
             } else {
                 blocked.push(targetName);
                 allBlocks[currentUser.name] = blocked;
-                alert(`🚫 تم حظر (${targetName}) بنجاح. لن تظهر لك رسائله بعد الآن.`);
-                if (currentPrivateChatWith === targetName) {
-                    exitPrivateChat();
-                }
+                alert(`🚫 تم حظر (${targetName}) بنجاح.`);
+                if (currentPrivateChatWith === targetName) exitPrivateChat();
             }
             localStorage.setItem('craftino_personal_blocks', JSON.stringify(allBlocks));
             profileModal.classList.remove('active');
@@ -1328,22 +1276,28 @@
             return false;
         }
 
-        const savedUserJSON = localStorage.getItem('craftino_3d_user');
-        if (savedUserJSON) {
-            try {
-                let parsedUser = JSON.parse(savedUserJSON);
-                if (parsedUser && parsedUser.name) {
-                    currentUser = parsedUser;
-                    if (!checkBannedStatus(currentUser.name)) {
-                        setupOverlay.classList.add('hidden');
-                        initApp();
+        // --- التعديل الجذري والمُصحح لفحص التخزين المحلي فوراً عند الفتح ---
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedUserJSON = localStorage.getItem('craftino_3d_user');
+            if (savedUserJSON) {
+                try {
+                    let parsedUser = JSON.parse(savedUserJSON);
+                    if (parsedUser && parsedUser.name && parsedUser.name.trim() !== "") {
+                        currentUser = parsedUser;
+                        if (!checkBannedStatus(currentUser.name)) {
+                            setupOverlay.classList.add('hidden');
+                            initApp();
+                            loadSavedMessages();
+                            return;
+                        }
                     }
-                } else { setupOverlay.classList.remove('hidden'); }
-            } catch (err) {
-                localStorage.removeItem('craftino_3d_user');
-                setupOverlay.classList.remove('hidden');
+                } catch (err) {
+                    localStorage.removeItem('craftino_3d_user');
+                }
             }
-        } else { setupOverlay.classList.remove('hidden'); }
+            // في حال لم يتم العثور على اسم مخزن مسبقاً، تظهر نافذة التسجيل
+            setupOverlay.classList.remove('hidden');
+        });
 
         enterSiteBtn.addEventListener('click', () => {
             let name = setupNameInput.value.trim();
@@ -1357,9 +1311,13 @@
 
             currentUser.name = name;
             currentUser.avatar = selectedAvatarUrl;
+            
+            // حفظ بيانات الدخول نهائياً في localStorage لضمان عدم ظهورها أبداً لاحقاً
             localStorage.setItem('craftino_3d_user', JSON.stringify(currentUser));
+            
             setupOverlay.classList.add('hidden');
             initApp();
+            loadSavedMessages();
         });
 
         setupNameInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') enterSiteBtn.click(); });
@@ -1393,8 +1351,6 @@
             chatStatusIndicator.style.color = isLocked ? '#ef4444' : '#10b981';
 
             let activeUsers = JSON.parse(localStorage.getItem('craftino_3d_active_users')) || [];
-            let bannedList = JSON.parse(localStorage.getItem('craftino_3d_banned_users')) || [];
-            
             advancedMembersContainer.innerHTML = '';
             activeUsers = activeUsers.filter(u => u.name !== 'Crafto Sys');
 
@@ -1418,27 +1374,6 @@
                 `;
                 advancedMembersContainer.appendChild(li);
             });
-
-            if (bannedList.length > 0) {
-                let divider = document.createElement('div');
-                divider.style.margin = '10px 0 5px 0';
-                divider.style.fontWeight = 'bold';
-                divider.style.fontSize = '0.9em';
-                divider.style.color = '#ef4444';
-                divider.innerHTML = `<i class="fa-solid fa-user-slash"></i> المحظورين نهائياً من السيرفر:`;
-                advancedMembersContainer.appendChild(divider);
-
-                bannedList.forEach(bannedName => {
-                    let li = document.createElement('li');
-                    li.className = 'manage-user-row';
-                    li.style.background = 'rgba(239, 68, 68, 0.04)';
-                    li.innerHTML = `
-                        <span style="color: #ef4444; font-weight: bold;">${escapeHtml(bannedName)}</span>
-                        <button class="control-btn success" style="padding: 4px 12px; font-size: 0.85em;" onclick="modalUnbanUser('${escapeHtml(bannedName)}')">فك البان</button>
-                    `;
-                    advancedMembersContainer.appendChild(li);
-                });
-            }
         }
 
         window.setChatLockState = function(lockState) {
@@ -1472,14 +1407,6 @@
             }
         };
 
-        window.modalUnbanUser = function(targetName) {
-            let bannedList = JSON.parse(localStorage.getItem('craftino_3d_banned_users')) || [];
-            bannedList = bannedList.filter(u => u !== targetName);
-            localStorage.setItem('craftino_3d_banned_users', JSON.stringify(bannedList));
-            chatChannel.postMessage({ type: 'UNBAN_USER', targetName: targetName });
-            renderAdvancedManagementPanel();
-        };
-
         function initApp() {
             document.getElementById('headerUserAvatar').src = currentUser.avatar;
             document.getElementById('headerUserName').textContent = currentUser.name;
@@ -1490,7 +1417,7 @@
             chatChannel.postMessage({ type: 'JOIN', user: currentUser });
             chatChannel.postMessage({ type: 'JOIN', user: craftoSysBot });
 
-            updateNotificationBadgeUI(); // تحديث شارة الإشعارات عند البدء
+            updateNotificationBadgeUI();
 
             setInterval(() => {
                 currentUser.lastActive = Date.now();
@@ -1498,7 +1425,6 @@
                 updateOnlineUsersList(currentUser, true);
                 updateOnlineUsersList(craftoSysBot, true);
                 chatChannel.postMessage({ type: 'PING', user: currentUser });
-                chatChannel.postMessage({ type: 'PING', user: craftoSysBot });
             }, 5000);
         }
 
@@ -1516,6 +1442,21 @@
             replyPreviewBar.classList.remove('active');
         });
 
+        function persistMessageToStorage(msgData) {
+            let allMessages = JSON.parse(localStorage.getItem('craftino_persistent_messages')) || [];
+            allMessages.push(msgData);
+            if (allMessages.length > 100) allMessages.shift();
+            localStorage.setItem('craftino_persistent_messages', JSON.stringify(allMessages));
+        }
+
+        function loadSavedMessages() {
+            chatMessages.innerHTML = '';
+            let allMessages = JSON.parse(localStorage.getItem('craftino_persistent_messages')) || [];
+            allMessages.forEach(msg => {
+                appendMessage(msg, msg.user.name === currentUser.name, false);
+            });
+        }
+
         function sendMessageHandler() {
             let bannedList = JSON.parse(localStorage.getItem('craftino_3d_banned_users')) || [];
             if (bannedList.includes(currentUser.name)) {
@@ -1525,6 +1466,16 @@
 
             let text = messageInput.value.trim();
             if (!text) return;
+
+            let now = Date.now();
+            messageTimestamps.push(now);
+            messageTimestamps = messageTimestamps.filter(t => now - t <= 6000);
+
+            if (messageTimestamps.length > 4) {
+                triggerSpamWarningMessage("⚠️ تنبيه نظام الحماية: تم رصد سبام وتكرار بالرسائل! يرجى الهدوء.");
+                messageInput.value = '';
+                return;
+            }
 
             let msgData = {
                 id: 'msg_' + Date.now() + '_' + Math.random(),
@@ -1540,7 +1491,8 @@
                 saveNotification(currentPrivateChatWith, currentUser.name, text);
             }
 
-            appendMessage(msgData, true);
+            persistMessageToStorage(msgData);
+            appendMessage(msgData, true, true);
             chatChannel.postMessage(msgData);
             
             currentReplyingTo = null;
@@ -1548,6 +1500,28 @@
             messageInput.value = '';
             mentionDropdown.classList.remove('active');
             messageInput.focus();
+        }
+
+        function triggerSpamWarningMessage(warningText) {
+            let warnDiv = document.createElement('div');
+            warnDiv.className = 'message incoming';
+            warnDiv.style.background = 'linear-gradient(135deg, #fef2f2, #fee2e2)';
+            warnDiv.style.color = '#991b1b';
+            warnDiv.style.border = '2px solid #f87171';
+            warnDiv.style.boxShadow = '0 15px 35px rgba(239, 68, 68, 0.25)';
+            warnDiv.style.transform = 'translateZ(25px) scale(1.02)';
+            warnDiv.style.margin = '10px auto';
+            warnDiv.style.textAlign = 'center';
+            warnDiv.style.fontWeight = 'bold';
+            warnDiv.innerHTML = `<i class="fa-solid fa-triangle-exclamation" style="font-size: 1.2em; margin-bottom: 5px; display: block;"></i> ${warningText}`;
+            
+            chatMessages.appendChild(warnDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            setTimeout(() => {
+                warnDiv.classList.add('fade-out');
+                setTimeout(() => { warnDiv.remove(); }, 400);
+            }, 4000);
         }
 
         function saveNotification(recipientName, senderName, messageText) {
@@ -1563,7 +1537,6 @@
             updateNotificationBadgeUI();
         }
 
-        // دالة تحديث عداد شارة الأرقام الحمراء فوق زر الإشعارات حسب المنشن / الإشعارات الواردة
         function updateNotificationBadgeUI() {
             let allNotifs = JSON.parse(localStorage.getItem('craftino_notifications')) || {};
             let myNotifs = allNotifs[currentUser.name] || [];
@@ -1617,7 +1590,8 @@
                     time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                 };
                 if (currentPrivateChatWith) saveNotification(currentPrivateChatWith, currentUser.name, '[ملف مرفق]');
-                appendMessage(msgData, true);
+                persistMessageToStorage(msgData);
+                appendMessage(msgData, true, true);
                 chatChannel.postMessage(msgData);
                 currentReplyingTo = null;
                 replyPreviewBar.classList.remove('active');
@@ -1632,24 +1606,12 @@
 
             if (data.type === 'BAN_USER' && data.targetName === currentUser.name) {
                 bannedOverlay.classList.add('active');
-            } else if (data.type === 'TEXT' || data.type === 'IMAGE' || data.type === 'VIDEO' || data.type === 'AUDIO') {
+            } else if (data.type === 'TEXT' || data.type === 'IMAGE' || data.type === 'VIDEO') {
                 let blockedList = getMyBlockedUsers();
                 if (blockedList.includes(data.user.name)) return;
 
-                // التحقق مما إذا كان تم منشن المستخدم في الرسالة أو الشات الخاص
-                let isMentioned = data.content && data.content.includes(`@${currentUser.name}`);
-                if (isMentioned && data.user.name !== currentUser.name) {
-                    saveNotification(currentUser.name, data.user.name, `قامت بالإشارة إليك: ${data.content}`);
-                }
-
-                if (data.targetPrivateTo === currentUser.name) {
-                    saveNotification(currentUser.name, data.user.name, data.content);
-                    if (currentPrivateChatWith === data.user.name) {
-                        appendMessage(data, false);
-                    }
-                } else if (!data.targetPrivateTo && !currentPrivateChatWith) {
-                    appendMessage(data, false);
-                }
+                persistMessageToStorage(data);
+                appendMessage(data, data.user.name === currentUser.name, true);
             } else if (data.type === 'DELETE_MSG') {
                 let msgElement = document.querySelector(`[data-id="${data.msgId}"]`);
                 if (msgElement) {
@@ -1661,7 +1623,7 @@
             }
         };
 
-        function appendMessage(data, isMe) {
+        function appendMessage(data, isMe, shouldScroll = true) {
             if (currentPrivateChatWith) {
                 if (data.targetPrivateTo !== currentPrivateChatWith && data.user.name !== currentPrivateChatWith && !isMe) return;
                 if (isMe && data.targetPrivateTo !== currentPrivateChatWith) return;
@@ -1696,27 +1658,32 @@
                         <img src="${data.user.avatar || 'https://api.dicebear.com/7.x/bottts/svg?seed=default'}" class="msg-avatar">
                         <span class="msg-user">${escapeHtml(data.user.name)}</span>
                         <span class="badge ${roleBadgeClass}">${roleName}</span>
-                        ${data.targetPrivateTo ? '<span style="font-size:0.7em; background:#0284c7; color:#fff; padding:1px 5px; border-radius:4px;">خاص</span>' : ''}
                     </div>
                     <div class="msg-actions-group">${replyBtnHtml}${deleteBtnHtml}</div>
                 </div>
             `;
 
             if (data.type === 'TEXT') {
-                let formattedContent = escapeHtml(data.content).replace(/\n/g, '<br>');
+                let escapedText = escapeHtml(data.content);
+                let urlRegex = /(https?:\/\/[^\s]+)/g;
+                let formattedContent = escapedText.replace(urlRegex, function(url) {
+                    return `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`;
+                });
+                formattedContent = formattedContent.replace(/\n/g, '<br>');
+                
                 innerHTML += `<div>${formattedContent}</div>`;
             } else if (data.type === 'IMAGE') {
                 innerHTML += `<img src="${data.content}" class="msg-media-img" onclick="openPreview('${data.content}')">`;
             } else if (data.type === 'VIDEO') {
                 innerHTML += `<video src="${data.content}" controls class="msg-media-video"></video>`;
-            } else if (data.type === 'AUDIO') {
-                innerHTML += `<audio src="${data.content}" controls class="msg-audio"></audio>`;
             }
 
             innerHTML += `<div class="msg-time">${data.time}</div>`;
             msgDiv.innerHTML = innerHTML;
             chatMessages.appendChild(msgDiv);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
+            if (shouldScroll) {
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
         }
 
         window.prepareReply = function(username, textContent) {
@@ -1733,6 +1700,10 @@
                 msgElement.classList.add('fade-out');
                 setTimeout(() => msgElement.remove(), 400);
             }
+            let allMessages = JSON.parse(localStorage.getItem('craftino_persistent_messages')) || [];
+            allMessages = allMessages.filter(m => m.id !== msgId);
+            localStorage.setItem('craftino_persistent_messages', JSON.stringify(allMessages));
+
             chatChannel.postMessage({ type: 'DELETE_MSG', msgId: msgId });
         };
 
@@ -1807,8 +1778,7 @@
             currentPrivateChatWith = null;
             document.getElementById('chatRoomTitleText').querySelector('span').textContent = `غرفة Craftino 3D العامة`;
             document.getElementById('backToGeneralBtn').classList.remove('active');
-            chatMessages.innerHTML = '';
-            triggerSystemNotice(`🌐 عدت إلى غرفة الشات العامة.`);
+            loadSavedMessages();
         };
 
         closeProfileBtn.addEventListener('click', () => profileModal.classList.remove('active'));
@@ -1864,7 +1834,6 @@
                 });
             }
 
-            // عند فتح قائمة الإشعارات، يتم مسح الإشعارات وتصفير العداد الأحمر
             allNotifs[currentUser.name] = [];
             localStorage.setItem('craftino_notifications', JSON.stringify(allNotifs));
             updateNotificationBadgeUI();
@@ -1924,7 +1893,7 @@
 
             if (offlineUsers.length > 0) {
                 let offlineHeader = document.createElement('div');
-                offlineHeader.className = 'user-group-title';
+                offlineHeader.className, 'user-group-title';
                 offlineHeader.style.marginTop = '16px';
                 offlineHeader.innerHTML = `<i class="fa-solid fa-circle" style="font-size: 6px; color: #94a3b8;"></i> أوفلاين — ${offlineUsers.length}`;
                 onlineUsersList.appendChild(offlineHeader);
