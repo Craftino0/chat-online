@@ -1009,6 +1009,92 @@
             .chat-input-area { padding: 12px 15px; }
             .message { max-width: 90%; }
         }
+
+        /* ===== Automatic responsive sizing ===== */
+        :root {
+            --ui-scale: 1;
+        }
+
+        .chat-header,
+        .chat-input-area {
+            min-height: calc(75px * var(--ui-scale));
+        }
+
+        .chat-header { padding-inline: calc(30px * var(--ui-scale)); }
+        .chat-input-area { padding: calc(18px * var(--ui-scale)) calc(30px * var(--ui-scale)); }
+        .chat-messages { padding: calc(25px * var(--ui-scale)); gap: calc(18px * var(--ui-scale)); }
+        .sidebar { width: calc(300px * var(--ui-scale)); padding: calc(20px * var(--ui-scale)); }
+
+        body.compact-device {
+            perspective: none;
+        }
+
+        body.compact-device .sidebar {
+            width: 220px;
+            padding: 10px;
+        }
+
+        body.compact-device .chat-header {
+            height: 58px;
+            padding-inline: 10px;
+        }
+
+        body.compact-device .chat-input-area {
+            padding: 8px 10px;
+            gap: 8px;
+        }
+
+        body.compact-device .attach-btn,
+        body.compact-device .send-btn,
+        body.compact-device .mic-btn {
+            width: 42px;
+            height: 42px;
+        }
+
+        body.compact-device .chat-input {
+            padding: 10px 14px;
+        }
+
+        body.low-performance {
+            perspective: none !important;
+        }
+
+        body.low-performance .message {
+            transform: none !important;
+            animation: none !important;
+        }
+
+        body.low-performance .setup-card {
+            animation: none !important;
+            transform: none !important;
+        }
+
+        body.low-performance .chat-app,
+        body.low-performance .message,
+        body.low-performance .online-user-item {
+            transform-style: flat !important;
+        }
+
+        @media (max-width: 900px) {
+            .sidebar { width: 240px; padding: 12px; }
+            .message { max-width: 80%; }
+        }
+
+        @media (max-width: 650px) {
+            .sidebar { display: none; }
+            .chat-header { padding: 0 15px; }
+            .chat-input-area { padding: 12px 15px; }
+            .message { max-width: 90%; }
+        }
+
+
+        .global-connection-note {
+            margin-top: 12px;
+            font-size: 0.72em;
+            color: var(--muted-color);
+            line-height: 1.5;
+        }
+
     </style>
 </head>
 <body>
@@ -1052,7 +1138,7 @@
     <div class="setup-overlay" id="setupOverlay">
         <div class="setup-card">
             <h2>مرحباً بك في <span>Craftino 3D العالمى</span></h2>
-            <p>اختر صورة بروفايلك واكتب اسمك للانضمام لغرفة التواصل الجماعي العالمية:</p>
+            <p>اختر صورة بروفايلك واكتب اسمك للانضمام التلقائي لغرفة التواصل الجماعي العالمية:</p>
             
             <div class="avatar-selection-container">
                 <div class="avatar-selector" id="avatarSelector">
@@ -1069,6 +1155,9 @@
 
             <input type="text" id="setupNameInput" class="setup-input" placeholder="اكتب اسمك المستعار..." autocomplete="off">
             <button class="setup-btn" id="enterSiteBtn">دخول الشات العالمي الآن <i class="fa-solid fa-arrow-left"></i></button>
+            <div class="global-connection-note">
+                🌍 الشات مبرمج ليحولك تلقائياً لغرفة عالمية واحدة مشتركة لكل الأعضاء حول العالم لحظياً.
+            </div>
         </div>
     </div>
 
@@ -1186,28 +1275,260 @@
     </div>
 
     <script>
-        // --- ميزة التعرف التلقائي على أداء الأجهزة والـ FPS وتخفيف الحمل تلقائياً ---
+        // --- نظام الأداء التلقائي: حجم الشاشة + قدرات الجهاز + FPS ---
+        const performanceState = {
+            tier: 'auto',
+            fps: 60,
+            width: window.innerWidth,
+            height: window.innerHeight,
+            dpr: Math.min(window.devicePixelRatio || 1, 2),
+            cores: navigator.hardwareConcurrency || 4,
+            memory: navigator.deviceMemory || 4
+        };
+
+        function applyDeviceProfile() {
+            performanceState.width = window.innerWidth;
+            performanceState.height = window.innerHeight;
+            performanceState.dpr = Math.min(window.devicePixelRatio || 1, 2);
+            performanceState.cores = navigator.hardwareConcurrency || 4;
+            performanceState.memory = navigator.deviceMemory || 4;
+
+            const area = performanceState.width * performanceState.height;
+            const isSmall = performanceState.width <= 700;
+            const isMedium = performanceState.width <= 1100;
+            const weakHardware =
+                performanceState.cores <= 4 ||
+                performanceState.memory <= 4 ||
+                performanceState.dpr >= 2.5;
+
+            document.documentElement.style.setProperty('--ui-scale',
+                isSmall ? '0.88' : isMedium ? '0.94' : '1');
+
+            document.body.classList.toggle('compact-device', isSmall);
+            document.body.classList.toggle('medium-device', isMedium && !isSmall);
+
+            if (weakHardware || area < 900000) {
+                document.body.classList.add('low-performance');
+            }
+
+            updatePerformanceLabel();
+        }
+
+        function updatePerformanceLabel() {
+            document.documentElement.style.setProperty('--device-width', `${performanceState.width}px`);
+        }
+
+        applyDeviceProfile();
+        window.addEventListener('resize', applyDeviceProfile, { passive: true });
+        window.addEventListener('orientationchange', () => setTimeout(applyDeviceProfile, 250), { passive: true });
+
         let fpsFrames = 0;
         let lastFpsCheck = performance.now();
-        function monitorSystemFPS() {
+        let lastFrameTime = performance.now();
+
+        function monitorSystemFPS(now) {
             fpsFrames++;
-            let now = performance.now();
-            if (now - lastFpsCheck >= 2000) {
-                let fps = (fpsFrames * 1000) / (now - lastFpsCheck);
-                if (fps < 45) {
+            lastFrameTime = now;
+
+            if (now - lastFpsCheck >= 1500) {
+                const fps = (fpsFrames * 1000) / (now - lastFpsCheck);
+                performanceState.fps = Math.round(fps);
+
+                if (fps < 55) {
                     document.body.classList.add('low-performance');
-                } else if (fps > 55) {
+                } else if (fps >= 59 && performanceState.cores >= 6 && performanceState.memory >= 6) {
                     document.body.classList.remove('low-performance');
                 }
+
                 fpsFrames = 0;
                 lastFpsCheck = now;
             }
+
             requestAnimationFrame(monitorSystemFPS);
         }
         requestAnimationFrame(monitorSystemFPS);
 
-        // --- نظام الشات الجماعي العالمي المشترك (BroadcastChannel + LocalStorage Sync) ---
-        const chatChannel = new BroadcastChannel('craftino_3d_global_world_chat_channel');
+        // ============================================================
+        // FIREBASE REALTIME DATABASE CONFIG (الغرفة العالمية التلقائية)
+        // ============================================================
+        const FIREBASE_CONFIG = {
+            apiKey: "PUT_YOUR_FIREBASE_API_KEY_HERE",
+            authDomain: "PUT_YOUR_PROJECT.firebaseapp.com",
+            databaseURL: "https://PUT_YOUR_PROJECT-default-rtdb.firebaseio.com",
+            projectId: "PUT_YOUR_PROJECT",
+            storageBucket: "PUT_YOUR_PROJECT.firebasestorage.app",
+            messagingSenderId: "PUT_YOUR_MESSAGING_SENDER_ID",
+            appId: "PUT_YOUR_FIREBASE_APP_ID"
+        };
+
+        let firebaseReady = false;
+        let firebaseDB = null;
+        let firebaseAuth = null;
+        let firebaseUser = null;
+
+        function firebaseConfigured() {
+            return !Object.values(FIREBASE_CONFIG).some(v =>
+                typeof v === 'string' && v.includes('PUT_YOUR_')
+            );
+        }
+
+        const chatChannel = {
+            _handler: null,
+            set onmessage(fn) {
+                this._handler = fn;
+            },
+            get onmessage() {
+                return this._handler;
+            },
+            async postMessage(data) {
+                if (!firebaseReady || !firebaseDB) {
+                    console.warn('Firebase is not configured/connected yet.');
+                    return;
+                }
+                try {
+                    const ref = firebase.database().ref('craftino_global_room/events').push();
+                    await ref.set({
+                        ...data,
+                        _sentAt: firebase.database.ServerValue.TIMESTAMP,
+                        _senderId: firebaseUser?.uid || null
+                    });
+                } catch (err) {
+                    console.error('Global chat send failed:', err);
+                }
+            }
+        };
+
+        async function initGlobalRealtime() {
+            if (!firebaseConfigured()) {
+                console.warn('Craftino: Firebase config is missing. Please put your config keys.');
+                return;
+            }
+
+            try {
+                const { initializeApp } =
+                    await import('https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js');
+                const { getDatabase, ref, onChildAdded, onValue } =
+                    await import('https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js');
+                const { getAuth, signInAnonymously } =
+                    await import('https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js');
+
+                firebase = {
+                    app: initializeApp(FIREBASE_CONFIG),
+                    database() { return getDatabase(this.app); },
+                    auth() { return getAuth(this.app); },
+                    databaseApi: { ref, onChildAdded, onValue }
+                };
+
+                firebaseDB = firebase.database();
+                firebaseAuth = firebase.auth();
+                const credential = await signInAnonymously(firebaseAuth);
+                firebaseUser = credential.user;
+                firebaseReady = true;
+
+                const eventsRef = ref(firebaseDB, 'craftino_global_room/events');
+                onChildAdded(eventsRef, snap => {
+                    const data = snap.val();
+                    if (!data || data._senderId === firebaseUser.uid) return;
+                    if (chatChannel._handler) {
+                        chatChannel._handler({ data });
+                    }
+                });
+
+                await setupGlobalPresence();
+                await loadGlobalHistory();
+
+                console.log('Craftino global shared room connected successfully.');
+            } catch (err) {
+                console.error('Craftino Firebase initialization failed:', err);
+            }
+        }
+
+        async function setupGlobalPresence() {
+            if (!firebaseReady || !firebaseDB || !firebaseUser) return;
+
+            const presenceRef = firebase.database().ref(`craftino_global_room/presence/${firebaseUser.uid}`);
+            const connectedRef = firebase.database().ref('.info/connected');
+
+            firebase.databaseApi.onValue?.(connectedRef, async snap => {
+                if (!snap.val()) return;
+                await presenceRef.onDisconnect().remove();
+                await presenceRef.set({
+                    ...currentUser,
+                    uid: firebaseUser.uid,
+                    lastActive: firebase.database.ServerValue.TIMESTAMP
+                });
+            });
+
+            await presenceRef.set({
+                ...currentUser,
+                uid: firebaseUser.uid,
+                lastActive: firebase.database.ServerValue.TIMESTAMP
+            });
+
+            const presenceCollection = firebase.database().ref('craftino_global_room/presence');
+            firebase.databaseApi.onValue?.(presenceCollection, snap => {
+                const all = [];
+                snap.forEach(child => {
+                    const u = child.val();
+                    if (u && u.name) all.push(u);
+                });
+                localStorage.setItem('craftino_3d_active_users', JSON.stringify(all));
+                renderOnlineUsers(all);
+            });
+
+            setInterval(async () => {
+                if (!firebaseReady) return;
+                await presenceRef.update({
+                    ...currentUser,
+                    uid: firebaseUser.uid,
+                    lastActive: firebase.database.ServerValue.TIMESTAMP
+                });
+            }, 5000);
+        }
+
+        async function loadGlobalHistory() {
+            if (!firebaseReady || !firebaseDB) return;
+            const { get, query, orderByChild, limitToLast } =
+                await import('https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js');
+
+            try {
+                const historyRef = query(
+                    firebase.database().ref('craftino_global_room/messages'),
+                    orderByChild('_sentAt'),
+                    limitToLast(150)
+                );
+                const snap = await get(historyRef);
+                const messages = [];
+                snap.forEach(child => {
+                    const msg = child.val();
+                    if (msg) messages.push(msg);
+                });
+                messages.sort((a, b) => (a._sentAt || 0) - (b._sentAt || 0));
+
+                chatMessages.innerHTML = '';
+                messages.forEach(msg => {
+                    appendMessage(msg, msg.user?.name === currentUser.name, false);
+                });
+                if (messages.length) chatMessages.scrollTop = chatMessages.scrollHeight;
+            } catch (err) {
+                console.error('Could not load global history:', err);
+            }
+        }
+
+        async function persistGlobalMessage(msgData) {
+            if (!firebaseReady || !firebaseDB) return;
+            try {
+                const ref = firebase.database().ref('craftino_global_room/messages').push();
+                await ref.set({
+                    ...msgData,
+                    _sentAt: firebase.database.ServerValue.TIMESTAMP
+                });
+            } catch (err) {
+                console.error('Could not persist global message:', err);
+            }
+        }
+
+        initGlobalRealtime();
         
         let currentUser = {
             name: '',
@@ -1480,9 +1801,13 @@
 
         function persistMessageToStorage(msgData) {
             let allMessages = JSON.parse(localStorage.getItem('craftino_persistent_messages')) || [];
-            allMessages.push(msgData);
+            if (!allMessages.some(m => m.id === msgData.id)) {
+                allMessages.push(msgData);
+            }
             if (allMessages.length > 150) allMessages.shift();
             localStorage.setItem('craftino_persistent_messages', JSON.stringify(allMessages));
+
+            persistGlobalMessage(msgData);
         }
 
         function loadSavedMessages() {
@@ -1919,10 +2244,7 @@
             onlineUsersList.innerHTML = '';
             
             let currentTime = Date.now();
-            let onlineUsers = users.filter(u => !bannedList.includes(u.name) && !blockedList.includes(u.name) && (currentTime - (u.lastActual || u.lastActive || 0) < 15000));
-            
-            // لتحديث القائمة بشكل أسرع وأدق للزوار الجدد:
-            onlineUsers = users.filter(u => !bannedList.includes(u.name) && !blockedList.includes(u.name) && (currentTime - (u.lastActive || 0) < 20000));
+            let onlineUsers = users.filter(u => !bannedList.includes(u.name) && !blockedList.includes(u.name) && (currentTime - (u.lastActive || 0) < 20000));
             let offlineUsers = users.filter(u => !bannedList.includes(u.name) && !blockedList.includes(u.name) && (currentTime - (u.lastActive || 0) >= 20000));
 
             onlineCountBadge.textContent = onlineUsers.length;
