@@ -1,0 +1,1972 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Craftino 3D Chat | الشات الجماعي المباشر</title>
+    
+    <!-- أيقونات FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        :root {
+            --bg-color: #f0f4f8;
+            --text-color: #0f172a;
+            --muted-color: #64748b;
+            --card-bg: #ffffff;
+            --card-border: rgba(2, 132, 199, 0.2);
+            --primary-color: #0284c7;
+            --primary-gradient: linear-gradient(135deg, #38bdf8, #0284c7);
+            --glow-color: rgba(2, 132, 199, 0.25);
+            --bubble-me: linear-gradient(135deg, #0284c7, #0369a1);
+            --bubble-other: #e2e8f0;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            scroll-behavior: smooth;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100vh;
+            color: var(--text-color);
+            background-color: var(--bg-color);
+            overflow: hidden;
+            perspective: 1200px;
+        }
+
+        /* نافذة الإعداد الإجبارية قبل الدخول */
+        .setup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(15px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 99999;
+            padding: 20px;
+        }
+
+        .setup-overlay.hidden {
+            display: none !important;
+        }
+
+        .setup-card {
+            background: var(--card-bg);
+            border: 2px solid var(--card-border);
+            width: 100%;
+            max-width: 440px;
+            padding: 35px;
+            border-radius: 24px;
+            text-align: center;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.3), 0 0 30px var(--glow-color);
+            transform-style: preserve-3d;
+            animation: floatCard 4s ease-in-out infinite;
+        }
+
+        @keyframes floatCard {
+            0%, 100% { transform: translateY(0px) rotateX(2deg); }
+            50% { transform: translateY(-8px) rotateX(-2deg); }
+        }
+
+        .setup-card h2 {
+            margin-bottom: 8px;
+            color: var(--text-color);
+            font-size: 1.8em;
+        }
+
+        .setup-card h2 span {
+            color: var(--primary-color);
+        }
+
+        .setup-card p {
+            color: var(--muted-color);
+            font-size: 0.95em;
+            margin-bottom: 20px;
+        }
+
+        .avatar-selection-container {
+            margin-bottom: 20px;
+        }
+
+        .avatar-selector {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+
+        .avatar-option {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: 3px solid transparent;
+            cursor: pointer;
+            object-fit: cover;
+            transition: 0.3s;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .avatar-option.selected {
+            border-color: var(--primary-color);
+            transform: scale(1.15) translateZ(20px);
+            box-shadow: 0 10px 20px var(--glow-color);
+        }
+
+        .custom-image-upload-label {
+            display: inline-block;
+            background: rgba(2, 132, 199, 0.1);
+            color: var(--primary-color);
+            border: 1px dashed var(--primary-color);
+            padding: 8px 15px;
+            border-radius: 10px;
+            font-size: 0.9em;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .custom-image-upload-label:hover {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .setup-input {
+            width: 100%;
+            padding: 14px 18px;
+            background: #f8fafc;
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            color: var(--text-color);
+            font-size: 1.05em;
+            margin-bottom: 20px;
+            outline: none;
+            text-align: center;
+            transition: 0.3s;
+        }
+
+        .setup-input:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 15px var(--glow-color);
+        }
+
+        .setup-btn {
+            width: 100%;
+            background: var(--primary-gradient);
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 12px;
+            font-size: 1.05em;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 10px 25px var(--glow-color);
+            transition: 0.3s;
+        }
+
+        .setup-btn:hover {
+            transform: translateY(-3px);
+            opacity: 0.95;
+        }
+
+        /* هيكل تطبيق الشات */
+        .chat-app {
+            display: flex;
+            width: 100vw;
+            height: 100vh;
+            background: var(--bg-color);
+            transform-style: preserve-3d;
+        }
+
+        /* الشريط الجانبي */
+        .sidebar {
+            width: 300px;
+            background: var(--card-bg);
+            border-left: 1px solid var(--card-border);
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            box-shadow: -5px 0 25px rgba(0,0,0,0.03);
+            z-index: 10;
+        }
+
+        .sidebar-header {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .notifications-top-btn {
+            background: rgba(2, 132, 199, 0.1);
+            border: 1px solid var(--card-border);
+            color: var(--primary-color);
+            padding: 6px 10px;
+            border-radius: 8px;
+            font-size: 0.8em;
+            cursor: pointer;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            position: relative; /* مهم لتموضع شارة الأرقام الحمراء فوق الزر */
+        }
+        
+        /* شارة الأرقام الحمراء لإشعارات المنشن */
+        .notif-badge-counter {
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            background: #ef4444;
+            color: white;
+            font-size: 0.7em;
+            font-weight: bold;
+            padding: 2px 6px;
+            border-radius: 50px;
+            box-shadow: 0 2px 6px rgba(239, 68, 68, 0.5);
+            display: none; /* مخفي افتراضياً حتى يوجد منشن */
+            animation: bounceIn 0.3s ease;
+        }
+        .notif-badge-counter.active {
+            display: inline-block;
+        }
+
+        @keyframes bounceIn {
+            0% { transform: scale(0); }
+            70% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+
+        .notifications-top-btn:hover {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .online-users-list {
+            list-style: none;
+            overflow-y: auto;
+            flex: 1;
+            padding-left: 4px;
+        }
+
+        .user-group-title {
+            font-size: 0.8em;
+            font-weight: bold;
+            color: var(--muted-color);
+            text-transform: uppercase;
+            margin: 12px 0 6px 0;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .online-user-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 10px;
+            margin-bottom: 8px;
+            background: rgba(2, 132, 199, 0.04);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            font-size: 0.9em;
+            transition: 0.3s;
+            cursor: pointer;
+        }
+
+        .online-user-item:hover {
+            background: rgba(2, 132, 199, 0.1);
+            transform: translateX(-3px);
+        }
+
+        .online-user-item.offline-user {
+            opacity: 0.55;
+            background: rgba(100, 116, 139, 0.04);
+            border-color: rgba(100, 116, 139, 0.15);
+        }
+
+        .user-main-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .user-avatar-small {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid var(--primary-color);
+            flex-shrink: 0;
+        }
+
+        .offline-user .user-avatar-small {
+            border-color: var(--muted-color);
+            filter: grayscale(100%);
+        }
+
+        .status-dot {
+            position: absolute;
+            bottom: 0;
+            right: 22px;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            border: 2px solid var(--card-bg);
+        }
+        .status-dot.online { background-color: #10b981; }
+        .status-dot.offline { background-color: #94a3b8; }
+
+        .user-info-text {
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .user-name-role {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .badge {
+            font-size: 0.65em;
+            padding: 2px 6px;
+            border-radius: 6px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .badge.owner { background: linear-gradient(135deg, #f59e0b, #d97706); color: white; box-shadow: 0 0 10px rgba(245, 158, 11, 0.5); }
+        .badge.admin { background: linear-gradient(135deg, #ef4444, #b91c1c); color: white; box-shadow: 0 0 10px rgba(239, 68, 68, 0.5); }
+        .badge.system { background: linear-gradient(135deg, #8b5cf6, #6d28d9); color: white; box-shadow: 0 0 10px rgba(139, 92, 246, 0.5); }
+        .badge.member { background: linear-gradient(135deg, #0284c7, #0369a1); color: white; }
+
+        .server-stats-footer {
+            margin-top: 10px;
+            padding-top: 12px;
+            border-top: 1px solid var(--card-border);
+            font-size: 0.85em;
+            color: var(--muted-color);
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .owner-secret-btn {
+            margin-top: 10px;
+            width: 100%;
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 12px;
+            font-size: 0.95em;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(245, 158, 11, 0.3);
+            transition: 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .owner-secret-btn:hover {
+            transform: translateY(-2px);
+            opacity: 0.95;
+            box-shadow: 0 8px 20px rgba(245, 158, 11, 0.5);
+        }
+
+        /* منطقة المحادثة */
+        .chat-main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            background: radial-gradient(circle at center, #ffffff 0%, #f0f4f8 100%);
+            position: relative;
+        }
+
+        .chat-header {
+            height: 75px;
+            background: var(--card-bg);
+            border-bottom: 1px solid var(--card-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 30px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.03);
+        }
+
+        .chat-room-title {
+            font-size: 1.3em;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .chat-room-title span {
+            color: var(--primary-color);
+        }
+
+        /* زر العودة (Back button) للصفحة الخاصة */
+        .back-to-general-btn {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #ef4444;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: bold;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            gap: 6px;
+            transition: 0.3s;
+        }
+        .back-to-general-btn.active {
+            display: flex;
+        }
+        .back-to-general-btn:hover {
+            background: #ef4444;
+            color: white;
+        }
+
+        .my-profile-btn {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(2, 132, 199, 0.08);
+            border: 1px solid var(--card-border);
+            padding: 6px 15px;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .my-profile-btn:hover {
+            background: var(--primary-gradient);
+            color: white;
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px var(--glow-color);
+        }
+
+        .my-profile-btn:hover span {
+            color: white !important;
+        }
+
+        /* صندوق الرسائل */
+        .chat-messages {
+            flex: 1;
+            padding: 25px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+            transform-style: preserve-3d;
+        }
+
+        .message {
+            max-width: 65%;
+            padding: 14px 18px;
+            border-radius: 16px;
+            position: relative;
+            font-size: 0.98em;
+            line-height: 1.5;
+            word-wrap: break-word;
+            box-shadow: 0 10px 25px rgba(2, 132, 199, 0.08);
+            transform: translateZ(15px);
+            transition: transform 0.3s, opacity 0.5s ease;
+            animation: popIn 0.3s ease;
+        }
+
+        .message.fade-out {
+            opacity: 0;
+            transform: scale(0.5) translateY(-30px) translateZ(0px) rotate(10deg);
+        }
+
+        @keyframes popIn {
+            0% { opacity: 0; transform: translateY(15px) translateZ(0px); }
+            100% { opacity: 1; transform: translateY(0) translateZ(15px); }
+        }
+
+        .message.incoming {
+            background: var(--bubble-other);
+            color: var(--text-color);
+            align-self: flex-start;
+            border-top-left-radius: 3px;
+            border: 1px solid var(--card-border);
+        }
+
+        .message.outgoing {
+            background: var(--bubble-me);
+            color: white;
+            align-self: flex-end;
+            border-top-right-radius: 3px;
+        }
+
+        .mention-tag {
+            background: rgba(2, 132, 199, 0.2);
+            color: var(--primary-color);
+            padding: 2px 6px;
+            border-radius: 6px;
+            font-weight: bold;
+            display: inline-block;
+        }
+        .message.outgoing .mention-tag {
+            background: rgba(255, 255, 255, 0.25);
+            color: #ffffff;
+        }
+
+        .reply-quote-box {
+            background: rgba(0, 0, 0, 0.08);
+            border-left: 3px solid var(--primary-color);
+            padding: 6px 10px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            font-size: 0.85em;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .message.outgoing .reply-quote-box {
+            background: rgba(255, 255, 255, 0.15);
+            border-left-color: #bae6fd;
+            color: #f8fafc;
+        }
+        .reply-quote-user {
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+        .message.outgoing .reply-quote-user {
+            color: #bae6fd;
+        }
+
+        .msg-header-line {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 6px;
+        }
+
+        .msg-user-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+        .msg-user-info:hover .msg-user {
+            text-decoration: underline;
+        }
+
+        .msg-actions-group {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .msg-reply-btn, .msg-delete-btn {
+            background: transparent;
+            border: none;
+            color: rgba(255, 255, 255, 0.7);
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: 0.2s;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .message.incoming .msg-reply-btn, .message.incoming .msg-delete-btn {
+            color: var(--muted-color);
+        }
+
+        .msg-reply-btn:hover {
+            background: rgba(2, 132, 199, 0.2);
+            color: var(--primary-color);
+        }
+
+        .msg-delete-btn:hover {
+            background: rgba(220, 38, 38, 0.2);
+            color: #dc2626;
+        }
+
+        .msg-avatar {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .msg-user {
+            font-size: 0.85em;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        .message.outgoing .msg-user {
+            color: #bae6fd;
+        }
+
+        .msg-time {
+            font-size: 0.7em;
+            opacity: 0.7;
+            margin-top: 6px;
+            text-align: left;
+        }
+
+        .msg-media-img {
+            max-width: 100%;
+            max-height: 260px;
+            border-radius: 12px;
+            margin-top: 8px;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .msg-media-video {
+            max-width: 100%;
+            max-height: 260px;
+            border-radius: 12px;
+            margin-top: 8px;
+        }
+
+        .msg-audio {
+            margin-top: 8px;
+            width: 240px;
+        }
+
+        .mention-dropdown {
+            position: absolute;
+            bottom: 85px;
+            right: 30px;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 14px;
+            width: 260px;
+            max-height: 200px;
+            overflow-y: auto;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            display: none;
+            z-index: 100;
+            padding: 5px;
+        }
+        .mention-dropdown.active {
+            display: block;
+        }
+        .mention-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: 0.2s;
+            font-size: 0.9em;
+        }
+        .mention-item:hover {
+            background: rgba(2, 132, 199, 0.1);
+            color: var(--primary-color);
+        }
+
+        .reply-preview-bar {
+            background: #f8fafc;
+            border-top: 1px solid var(--card-border);
+            padding: 8px 30px;
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.9em;
+        }
+        .reply-preview-bar.active {
+            display: flex;
+        }
+        .cancel-reply-btn {
+            background: transparent;
+            border: none;
+            color: #ef4444;
+            cursor: pointer;
+            font-size: 1.1em;
+        }
+
+        .chat-input-area {
+            background: var(--card-bg);
+            border-top: 1px solid var(--card-border);
+            padding: 18px 30px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            box-shadow: 0 -5px 25px rgba(0,0,0,0.03);
+            z-index: 5;
+            position: relative;
+        }
+
+        .attach-btn, .send-btn, .mic-btn {
+            background: rgba(2, 132, 199, 0.08);
+            border: 1px solid var(--card-border);
+            color: var(--primary-color);
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: 0.3s;
+            font-size: 1.15em;
+            flex-shrink: 0;
+        }
+
+        .attach-btn:hover, .send-btn:hover, .mic-btn:hover {
+            background: var(--primary-gradient);
+            color: white;
+            transform: scale(1.1) translateZ(10px);
+            box-shadow: 0 8px 20px var(--glow-color);
+        }
+
+        .mic-btn.recording {
+            background: #dc2626;
+            color: white;
+            animation: pulseRec 1.2s infinite;
+        }
+
+        @keyframes pulseRec {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7); }
+            70% { transform: scale(1.1); box-shadow: 0 0 0 12px rgba(220, 38, 38, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 14px 22px;
+            background: #f8fafc;
+            border: 1px solid var(--card-border);
+            border-radius: 30px;
+            color: var(--text-color);
+            font-size: 1em;
+            outline: none;
+            transition: 0.3s;
+        }
+
+        .chat-input:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 15px var(--glow-color);
+        }
+
+        .banned-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(20px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999999;
+            padding: 20px;
+            text-align: center;
+        }
+        .banned-overlay.active { display: flex; }
+        .banned-card {
+            background: var(--card-bg);
+            border: 2px solid #ef4444;
+            max-width: 400px;
+            width: 100%;
+            padding: 40px;
+            border-radius: 24px;
+            box-shadow: 0 0 50px rgba(239, 68, 68, 0.4);
+        }
+        .banned-card i {
+            font-size: 4em;
+            color: #ef4444;
+            margin-bottom: 20px;
+        }
+
+        .advanced-owner-modal {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(12px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 999999;
+            padding: 20px;
+        }
+        .advanced-owner-modal.active { display: flex; }
+        
+        .advanced-owner-card {
+            background: var(--card-bg);
+            border: 2px solid #f59e0b;
+            width: 100%;
+            max-width: 600px;
+            padding: 30px;
+            border-radius: 24px;
+            box-shadow: 0 25px 60px rgba(0,0,0,0.4), 0 0 30px rgba(245, 158, 11, 0.2);
+            max-height: 85vh;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .control-section {
+            background: rgba(245, 158, 11, 0.04);
+            border: 1px solid rgba(245, 158, 11, 0.2);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .control-section h4 {
+            color: #d97706;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 1.1em;
+        }
+
+        .control-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+
+        .control-btn {
+            background: var(--primary-gradient);
+            color: white;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.9em;
+            transition: 0.2s;
+            box-shadow: 0 5px 15px var(--glow-color);
+        }
+        .control-btn:hover { transform: translateY(-2px); opacity: 0.9; }
+        .control-btn.danger { background: linear-gradient(135deg, #ef4444, #b91c1c); box-shadow: 0 5px 15px rgba(239, 68, 68, 0.3); }
+        .control-btn.success { background: linear-gradient(135deg, #10b981, #059669); box-shadow: 0 5px 15px rgba(16, 185, 129, 0.3); }
+
+        .members-manage-container {
+            list-style: none;
+            max-height: 220px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .manage-user-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 15px;
+            background: #f8fafc;
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+        }
+
+        .profile-modal {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(10px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 99999;
+            padding: 20px;
+        }
+
+        .profile-modal.active { display: flex; }
+
+        .profile-card {
+            background: var(--card-bg);
+            border: 2px solid var(--card-border);
+            width: 100%;
+            max-width: 420px;
+            padding: 30px;
+            border-radius: 24px;
+            text-align: center;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.3);
+            position: relative;
+        }
+
+        .profile-close-btn {
+            position: absolute;
+            top: 20px; left: 20px;
+            background: rgba(2, 132, 199, 0.08);
+            border: none;
+            color: var(--text-color);
+            width: 35px; height: 35px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: 0.3s;
+        }
+
+        .profile-close-btn:hover { background: #dc2626; color: white; }
+
+        .profile-avatar-large {
+            width: 90px; height: 90px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid var(--primary-color);
+            margin: 0 auto 15px auto;
+            box-shadow: 0 8px 20px var(--glow-color);
+        }
+
+        .profile-input-group {
+            text-align: right;
+            margin-bottom: 15px;
+        }
+
+        .profile-input-group label {
+            font-size: 0.9em;
+            color: var(--muted-color);
+            margin-bottom: 5px;
+            display: block;
+        }
+
+        .profile-input {
+            width: 100%;
+            padding: 12px 16px;
+            background: #f8fafc;
+            border: 1px solid var(--card-border);
+            border-radius: 10px;
+            color: var(--text-color);
+            font-size: 0.95em;
+            outline: none;
+        }
+
+        .profile-input:focus { border-color: var(--primary-color); }
+
+        .notifications-modal {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(10px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 99999;
+            padding: 20px;
+        }
+        .notifications-modal.active { display: flex; }
+        .notifications-card {
+            background: var(--card-bg);
+            border: 2px solid var(--card-border);
+            width: 100%;
+            max-width: 450px;
+            padding: 30px;
+            border-radius: 24px;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.3);
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+        .notifications-list {
+            list-style: none;
+            overflow-y: auto;
+            max-height: 300px;
+            margin-top: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .notification-item {
+            background: #f8fafc;
+            border: 1px solid var(--card-border);
+            padding: 12px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .media-preview-modal {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 999999;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .media-preview-modal.active { display: flex; }
+        .media-preview-content {
+            max-width: 85%; max-height: 75%;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        @media (max-width: 768px) {
+            .sidebar { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="banned-overlay" id="bannedOverlay">
+        <div class="banned-card">
+            <i class="fa-solid fa-ban"></i>
+            <h2 style="color: #ef4444; margin-bottom: 10px;">تم حظرك من السيرفر</h2>
+            <p style="color: var(--muted-color);">لقد قامت إدارة السيرفر بحظرك نهائياً ولا يمكنك الدخول أو إرسال الرسائل.</p>
+        </div>
+    </div>
+
+    <!-- لوحة التحكم المتقدمة للأونر -->
+    <div class="advanced-owner-modal" id="advancedOwnerModal">
+        <div class="advanced-owner-card">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+                <h3 style="color: #d97706; display: flex; align-items: center; gap: 8px;"><i class="fa-solid fa-crown"></i> لوحة التحكم المتقدمة (للأونر فقط)</h3>
+                <button class="profile-close-btn" id="closeAdvancedModalBtn" style="position: static; width: 32px; height: 32px;"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <div class="control-section">
+                <h4><i class="fa-solid fa-lock"></i> حالة الشات العام</h4>
+                <div class="control-row">
+                    <span id="chatStatusIndicator" style="font-size: 0.9em; font-weight: bold; color: var(--muted-color);">الحالة الحالية: مفتوح</span>
+                    <div>
+                        <button class="control-btn danger" onclick="setChatLockState(true)"><i class="fa-solid fa-lock"></i> قفل الشات</button>
+                        <button class="control-btn success" onclick="setChatLockState(false)"><i class="fa-solid fa-lock-open"></i> فتح الشات</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="control-section">
+                <h4><i class="fa-solid fa-users-gear"></i> إدارة الأعضاء (الرولات والحظر)</h4>
+                <ul class="members-manage-container" id="advancedMembersContainer"></ul>
+            </div>
+
+            <button class="setup-btn" id="closeAdvancedModalBottom">إغلاق اللوحة</button>
+        </div>
+    </div>
+
+    <div class="setup-overlay" id="setupOverlay">
+        <div class="setup-card">
+            <h2>مرحباً بك في <span>Craftino 3D</span></h2>
+            <p>اختر صورة بروفايلك واكتب اسمك للدخول والشات المباشر:</p>
+            
+            <div class="avatar-selection-container">
+                <div class="avatar-selector" id="avatarSelector">
+                    <img src="https://api.dicebear.com/7.x/bottts/svg?seed=Craftino1" class="avatar-option selected" data-img="https://api.dicebear.com/7.x/bottts/svg?seed=Craftino1" alt="avatar">
+                    <img src="https://api.dicebear.com/7.x/bottts/svg?seed=AdminBot" class="avatar-option" data-img="https://api.dicebear.com/7.x/bottts/svg?seed=AdminBot" alt="avatar">
+                    <img src="https://api.dicebear.com/7.x/bottts/svg?seed=GameMaster" class="avatar-option" data-img="https://api.dicebear.com/7.x/bottts/svg?seed=GameMaster" alt="avatar">
+                    <img src="https://api.dicebear.com/7.x/bottts/svg?seed=CoolUser" class="avatar-option" data-img="https://api.dicebear.com/7.x/bottts/svg?seed=CoolUser" alt="avatar">
+                </div>
+                <div>
+                    <input type="file" id="customAvatarFile" accept="image/*" style="display: none;">
+                    <label for="customAvatarFile" class="custom-image-upload-label"><i class="fa-solid fa-upload"></i> أو رفع صورة من جهازك</label>
+                </div>
+            </div>
+
+            <input type="text" id="setupNameInput" class="setup-input" placeholder="اكتب اسمك المستعار..." autocomplete="off">
+            <button class="setup-btn" id="enterSiteBtn">دخول الشات الآن <i class="fa-solid fa-arrow-left"></i></button>
+        </div>
+    </div>
+
+    <div class="chat-app">
+        <div class="chat-main">
+            <div class="chat-header">
+                <div class="chat-room-title" id="chatRoomTitleText">
+                    <!-- زر الرجوع للصفحة العامة (Back) -->
+                    <button class="back-to-general-btn" id="backToGeneralBtn" onclick="exitPrivateChat()">
+                        <i class="fa-solid fa-arrow-right"></i> Back (رجوع)
+                    </button>
+                    <span>غرفة Craftino 3D العامة</span>
+                </div>
+                
+                <div class="my-profile-btn" id="openProfileBtn">
+                    <img id="headerUserAvatar" src="" class="user-avatar-small" style="width: 32px; height: 32px;" alt="بروفايل">
+                    <span id="headerUserName" style="font-weight: bold; font-size: 0.95em; color: var(--primary-color);">حسابي</span>
+                </div>
+            </div>
+
+            <div class="chat-messages" id="chatMessages"></div>
+
+            <div class="reply-preview-bar" id="replyPreviewBar">
+                <div style="display: flex; align-items: center; gap: 8px; overflow: hidden;">
+                    <i class="fa-solid fa-reply" style="color: var(--primary-color);"></i>
+                    <span style="font-size: 0.85em; color: var(--muted-color);">الرد على <strong id="replyTargetUser" style="color: var(--primary-color);"></strong>: <span id="replyTargetText" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></span></span>
+                </div>
+                <button class="cancel-reply-btn" id="cancelReplyBtn"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <div class="chat-input-area">
+                <div class="mention-dropdown" id="mentionDropdown"></div>
+
+                <input type="file" id="fileInput" accept="image/*,video/*" style="display: none;">
+                <button type="button" class="attach-btn" id="attachBtn" title="رفع صورة أو فيديو"><i class="fa-solid fa-paperclip"></i></button>
+                <button type="button" class="mic-btn" id="micBtn" title="تسجيل رسالة صوتية"><i class="fa-solid fa-microphone"></i></button>
+                <input type="text" id="messageInput" class="chat-input" placeholder="" autocomplete="off">
+                <button type="button" class="send-btn" id="sendBtn" title="إرسال"><i class="fa-solid fa-paper-plane"></i></button>
+            </div>
+        </div>
+
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <span><i class="fa-solid fa-shield-halved"></i> المتواجدون</span>
+                <!-- زر الإشعارات مع شارة الأرقام الحمراء -->
+                <button class="notifications-top-btn" id="openNotificationsBtn">
+                    <i class="fa-solid fa-bell"></i> الإشعارات
+                    <span class="notif-badge-counter" id="notifBadgeCounter">0</span>
+                </button>
+            </div>
+            
+            <ul class="online-users-list" id="onlineUsersList"></ul>
+
+            <div class="server-stats-footer" id="serverStatsFooter">
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                    <span><i class="fa-solid fa-circle" style="font-size: 8px; color: #10b981;"></i> المتواجدون:</span>
+                    <strong id="onlineCountBadge" style="color: var(--text-color);">0</strong>
+                </div>
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                    <span><i class="fa-solid fa-user-group" style="font-size: 10px;"></i> إجمالي الأعضاء:</span>
+                    <strong id="totalCountBadge" style="color: var(--text-color);">0</strong>
+                </div>
+            </div>
+
+            <button type="button" class="owner-secret-btn" id="ownerSecretBtn">
+                <i class="fa-solid fa-crown"></i> للاونر فقط
+            </button>
+        </div>
+    </div>
+
+    <!-- نافذة الملف الشخصي مع زر المحادثة الخاصة وخيار الحظر (Block) -->
+    <div class="profile-modal" id="profileModal">
+        <div class="profile-card">
+            <button class="profile-close-btn" id="closeProfileBtn"><i class="fa-solid fa-xmark"></i></button>
+            <img id="profileModalAvatar" src="" class="profile-avatar-large" alt="صورة البروفايل">
+            
+            <div id="profileEditImageDiv" style="margin-bottom: 15px;">
+                <input type="file" id="editCustomAvatarFile" accept="image/*" style="display: none;">
+                <label for="editCustomAvatarFile" class="custom-image-upload-label"><i class="fa-solid fa-camera"></i> تغيير صورة البروفايل</label>
+            </div>
+
+            <h3 id="profileModalTitle" style="margin-bottom: 5px;">الملف الشخصي</h3>
+            <p id="profileModalRoleBadge" style="margin-bottom: 15px;"></p>
+            <p id="profileModalBioText" style="font-size: 0.9em; color: var(--muted-color); margin-bottom: 20px;"></p>
+
+            <div class="profile-input-group" id="profileEditNameGroup">
+                <label>تغيير الاسم المستعار:</label>
+                <input type="text" id="editNameInput" class="profile-input" placeholder="اسمك الجديد...">
+            </div>
+
+            <div class="profile-input-group" id="profileEditBioGroup">
+                <label>الوصف الشخصي (Bio):</label>
+                <input type="text" id="editBioInput" class="profile-input" placeholder="اكتب نبذة عنك...">
+            </div>
+
+            <!-- أزرار التفاعل مع المستخدمين الآخرين -->
+            <button class="setup-btn" id="startPrivateChatBtn" style="background: linear-gradient(135deg, #10b981, #059669); margin-bottom: 10px; display: none;"><i class="fa-solid fa-comment-dots"></i> محادثة على الخاص</button>
+            <button class="setup-btn" id="toggleBlockUserBtn" style="background: linear-gradient(135deg, #ef4444, #b91c1c); margin-bottom: 10px; display: none;"><i class="fa-solid fa-user-slash"></i> حظر المستخدم (Block)</button>
+            
+            <button class="setup-btn" id="saveProfileBtn">حفظ التعديلات</button>
+        </div>
+    </div>
+
+    <div class="notifications-modal" id="notificationsModal">
+        <div class="notifications-card">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                <h3 style="color: var(--primary-color); display: flex; align-items: center; gap: 8px;"><i class="fa-solid fa-bell"></i> الإشعارات</h3>
+                <button class="profile-close-btn" id="closeNotificationsModalBtn" style="position: static; width: 32px; height: 32px;"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <ul class="notifications-list" id="notificationsListContainer">
+                <li style="text-align: center; color: var(--muted-color); padding: 20px;">لا توجد إشعارات جديدة حالياً.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="media-preview-modal" id="mediaPreviewModal">
+        <img class="media-preview-content" id="modalImagePreview" src="" alt="معاينة">
+        <button class="setup-btn" style="width: auto; padding: 10px 25px;" id="closePreviewBtn">إغلاق</button>
+    </div>
+
+    <script>
+        const badWords = [
+            "احا", "احااه", "عرص", "عرس", "متناكة", "متناكه", "منيوك", "منيوكه", "قحبة", "قحبه", "شرموط", "شرموطه", "شرموطة", 
+            "كس امك", "كسمك", "كسختك", "كسخت", "منيكة", "منيكه", "نيك", "ينيك", "تناك", "ينعن", "يلعن", "كلب", "حمار", "غبي", 
+            "وسخ", "وسخه", "وسخة", "خرا", "قذر", "قذره", "زبي", "زبى", "خول", "خولات", "الخول", "ديوث", "الديوث",
+            "fuck", "fucker", "fucking", "fucked", "shitty", "shit", "bitch", "bitches", "asshole", "assholes", 
+            "dick", "dicks", "bastard", "bastards", "cunt", "cunts", "pussy", "pussies", "slut", "sluts", 
+            "whore", "whores", "faggot", "fag", "idiot", "idiots", "stfu", "kys", "motherfucker"
+        ];
+
+        function containsBadWord(text) {
+            let lowerText = text.toLowerCase();
+            return badWords.some(word => lowerText.includes(word));
+        }
+
+        const chatChannel = new BroadcastChannel('craftino_3d_chat_channel');
+        
+        let currentUser = {
+            name: '',
+            avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=Craftino1',
+            bio: 'أعشق الألعاب وتطوير الويب في مجتمع كرافتينو',
+            role: 'member'
+        };
+
+        const craftoSysBot = {
+            name: 'Crafto Sys',
+            avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=CraftoSysBot',
+            bio: 'النظام الرسمي للسيرفر',
+            role: 'system',
+            lastActive: Date.now()
+        };
+
+        let currentReplyingTo = null;
+        let currentPrivateChatWith = null; 
+
+        function getMyBlockedUsers() {
+            let allBlocks = JSON.parse(localStorage.getItem('craftino_personal_blocks')) || {};
+            return allBlocks[currentUser.name] || [];
+        }
+
+        function toggleBlockUser(targetName) {
+            let allBlocks = JSON.parse(localStorage.getItem('craftino_personal_blocks')) || {};
+            let blocked = allBlocks[currentUser.name] || [];
+            
+            if (blocked.includes(targetName)) {
+                allBlocks[currentUser.name] = blocked.filter(n => n !== targetName);
+                alert(`✅ تم إلغاء حظر (${targetName}) بنجاح.`);
+            } else {
+                blocked.push(targetName);
+                allBlocks[currentUser.name] = blocked;
+                alert(`🚫 تم حظر (${targetName}) بنجاح. لن تظهر لك رسائله بعد الآن.`);
+                if (currentPrivateChatWith === targetName) {
+                    exitPrivateChat();
+                }
+            }
+            localStorage.setItem('craftino_personal_blocks', JSON.stringify(allBlocks));
+            profileModal.classList.remove('active');
+        }
+
+        const setupOverlay = document.getElementById('setupOverlay');
+        const setupNameInput = document.getElementById('setupNameInput');
+        const enterSiteBtn = document.getElementById('enterSiteBtn');
+        const avatarOptions = document.querySelectorAll('.avatar-option');
+        const customAvatarFile = document.getElementById('customAvatarFile');
+        const bannedOverlay = document.getElementById('bannedOverlay');
+        const ownerSecretBtn = document.getElementById('ownerSecretBtn');
+        const advancedOwnerModal = document.getElementById('advancedOwnerModal');
+        const closeAdvancedModalBtn = document.getElementById('closeAdvancedModalBtn');
+        const closeAdvancedModalBottom = document.getElementById('closeAdvancedModalBottom');
+        const advancedMembersContainer = document.getElementById('advancedMembersContainer');
+        const chatStatusIndicator = document.getElementById('chatStatusIndicator');
+
+        let selectedAvatarUrl = currentUser.avatar;
+
+        avatarOptions.forEach(opt => {
+            opt.addEventListener('click', () => {
+                avatarOptions.forEach(o => o.classList.remove('selected'));
+                opt.classList.add('selected');
+                selectedAvatarUrl = opt.getAttribute('data-img');
+            });
+        });
+
+        function compressImage(file, callback) {
+            let reader = new FileReader();
+            reader.onload = function (event) {
+                let img = new Image();
+                img.onload = function () {
+                    let canvas = document.createElement('canvas');
+                    let ctx = canvas.getContext('2d');
+                    let maxWidth = 150, maxHeight = 150;
+                    let width = img.width, height = img.height;
+                    if (width > height) {
+                        if (width > maxWidth) { height *= maxWidth / width; width = maxWidth; }
+                    } else {
+                        if (height > maxHeight) { width *= maxHeight / height; height = maxHeight; }
+                    }
+                    canvas.width = width; canvas.height = height;
+                    ctx.drawImage(img, 0, 0, width, height);
+                    callback(canvas.toDataURL('image/jpeg', 0.8));
+                }
+                img.src = event.target.result;
+            }
+            reader.readAsDataURL(file);
+        }
+
+        customAvatarFile.addEventListener('change', (e) => {
+            let file = e.target.files[0];
+            if (!file) return;
+            compressImage(file, (compressedUrl) => {
+                selectedAvatarUrl = compressedUrl;
+                avatarOptions.forEach(o => o.classList.remove('selected'));
+            });
+        });
+
+        function checkBannedStatus(name) {
+            let bannedList = JSON.parse(localStorage.getItem('craftino_3d_banned_users')) || [];
+            if (bannedList.includes(name)) {
+                bannedOverlay.classList.add('active');
+                setupOverlay.classList.add('hidden');
+                return true;
+            }
+            return false;
+        }
+
+        const savedUserJSON = localStorage.getItem('craftino_3d_user');
+        if (savedUserJSON) {
+            try {
+                let parsedUser = JSON.parse(savedUserJSON);
+                if (parsedUser && parsedUser.name) {
+                    currentUser = parsedUser;
+                    if (!checkBannedStatus(currentUser.name)) {
+                        setupOverlay.classList.add('hidden');
+                        initApp();
+                    }
+                } else { setupOverlay.classList.remove('hidden'); }
+            } catch (err) {
+                localStorage.removeItem('craftino_3d_user');
+                setupOverlay.classList.remove('hidden');
+            }
+        } else { setupOverlay.classList.remove('hidden'); }
+
+        enterSiteBtn.addEventListener('click', () => {
+            let name = setupNameInput.value.trim();
+            if (!name) { alert('يرجى كتابة اسمك أولاً!'); setupNameInput.focus(); return; }
+            if (checkBannedStatus(name)) return;
+
+            let lowerName = name.toLowerCase();
+            if (lowerName === 'owner' || name === 'مارتن' || lowerName === 'martin') { currentUser.role = 'owner'; }
+            else if (lowerName === 'admin' || lowerName === 'مشرف') { currentUser.role = 'admin'; }
+            else { currentUser.role = 'member'; }
+
+            currentUser.name = name;
+            currentUser.avatar = selectedAvatarUrl;
+            localStorage.setItem('craftino_3d_user', JSON.stringify(currentUser));
+            setupOverlay.classList.add('hidden');
+            initApp();
+        });
+
+        setupNameInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') enterSiteBtn.click(); });
+
+        ownerSecretBtn.addEventListener('click', () => {
+            if (currentUser.role === 'owner') { openAdvancedOwnerModal(); }
+            else {
+                let code = prompt("أدخل رمز الاونر (كلمة المرور):");
+                if (code === "2667") {
+                    currentUser.role = 'owner';
+                    localStorage.setItem('craftino_3d_user', JSON.stringify(currentUser));
+                    chatChannel.postMessage({ type: 'UPDATE_PROFILE', user: currentUser });
+                    updateOnlineUsersList(currentUser, true);
+                    alert("🎉 تم التحقق بنجاح! تم منحك رول الأونر.");
+                    openAdvancedOwnerModal();
+                } else if (code !== null) { alert("❌ رمز خاطئ!"); }
+            }
+        });
+
+        function openAdvancedOwnerModal() {
+            renderAdvancedManagementPanel();
+            advancedOwnerModal.classList.add('active');
+        }
+
+        closeAdvancedModalBtn.addEventListener('click', () => advancedOwnerModal.classList.remove('active'));
+        closeAdvancedModalBottom.addEventListener('click', () => advancedOwnerModal.classList.remove('active'));
+
+        function renderAdvancedManagementPanel() {
+            let isLocked = localStorage.getItem('craftino_chat_locked') === 'true';
+            chatStatusIndicator.textContent = `الحالة الحالية: ${isLocked ? 'مقفل 🔒' : 'مفتوح 🔓'}`;
+            chatStatusIndicator.style.color = isLocked ? '#ef4444' : '#10b981';
+
+            let activeUsers = JSON.parse(localStorage.getItem('craftino_3d_active_users')) || [];
+            let bannedList = JSON.parse(localStorage.getItem('craftino_3d_banned_users')) || [];
+            
+            advancedMembersContainer.innerHTML = '';
+            activeUsers = activeUsers.filter(u => u.name !== 'Crafto Sys');
+
+            activeUsers.forEach(u => {
+                let li = document.createElement('li');
+                li.className = 'manage-user-row';
+                li.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <img src="${u.avatar}" style="width: 30px; height: 30px; border-radius: 50%; object-fit: cover;">
+                        <strong>${escapeHtml(u.name)}</strong>
+                        <span class="badge ${u.role}">${u.role}</span>
+                    </div>
+                    <div style="display: flex; gap: 5px; align-items: center;">
+                        <select onchange="changeUserRole('${escapeHtml(u.name)}', this.value)" style="padding: 4px; border-radius: 6px; font-size: 0.85em;">
+                            <option value="member" ${u.role === 'member' ? 'selected' : ''}>عضو</option>
+                            <option value="admin" ${u.role === 'admin' ? 'selected' : ''}>مشرف</option>
+                            <option value="owner" ${u.role === 'owner' ? 'selected' : ''}>أونر</option>
+                        </select>
+                        ${u.role !== 'owner' ? `<button class="control-btn danger" style="padding: 4px 10px; font-size: 0.8em;" onclick="modalBanUser('${escapeHtml(u.name)}')">حظر</button>` : ''}
+                    </div>
+                `;
+                advancedMembersContainer.appendChild(li);
+            });
+
+            if (bannedList.length > 0) {
+                let divider = document.createElement('div');
+                divider.style.margin = '10px 0 5px 0';
+                divider.style.fontWeight = 'bold';
+                divider.style.fontSize = '0.9em';
+                divider.style.color = '#ef4444';
+                divider.innerHTML = `<i class="fa-solid fa-user-slash"></i> المحظورين نهائياً من السيرفر:`;
+                advancedMembersContainer.appendChild(divider);
+
+                bannedList.forEach(bannedName => {
+                    let li = document.createElement('li');
+                    li.className = 'manage-user-row';
+                    li.style.background = 'rgba(239, 68, 68, 0.04)';
+                    li.innerHTML = `
+                        <span style="color: #ef4444; font-weight: bold;">${escapeHtml(bannedName)}</span>
+                        <button class="control-btn success" style="padding: 4px 12px; font-size: 0.85em;" onclick="modalUnbanUser('${escapeHtml(bannedName)}')">فك البان</button>
+                    `;
+                    advancedMembersContainer.appendChild(li);
+                });
+            }
+        }
+
+        window.setChatLockState = function(lockState) {
+            localStorage.setItem('craftino_chat_locked', lockState ? 'true' : 'false');
+            chatChannel.postMessage({ type: 'TOGGLE_LOCK', locked: lockState });
+            triggerSystemNotice(lockState ? "🔒 تم قفل الشات العام." : "🔓 تم فتح الشات العام.");
+            renderAdvancedManagementPanel();
+        };
+
+        window.changeUserRole = function(targetName, newRole) {
+            let activeUsers = JSON.parse(localStorage.getItem('craftino_3d_active_users')) || [];
+            let user = activeUsers.find(u => u.name === targetName);
+            if (user) {
+                user.role = newRole;
+                localStorage.setItem('craftino_3d_active_users', JSON.stringify(activeUsers));
+                chatChannel.postMessage({ type: 'UPDATE_PROFILE', user: user });
+                renderAdvancedManagementPanel();
+            }
+        };
+
+        window.modalBanUser = function(targetName) {
+            if (confirm(`حظر العضو (${targetName}) نهائياً؟`)) {
+                let bannedList = JSON.parse(localStorage.getItem('craftino_3d_banned_users')) || [];
+                if (!bannedList.includes(targetName)) {
+                    bannedList.push(targetName);
+                    localStorage.setItem('craftino_3d_banned_users', JSON.stringify(bannedList));
+                }
+                removeUserFromOnlineList(targetName);
+                chatChannel.postMessage({ type: 'BAN_USER', targetName: targetName });
+                renderAdvancedManagementPanel();
+            }
+        };
+
+        window.modalUnbanUser = function(targetName) {
+            let bannedList = JSON.parse(localStorage.getItem('craftino_3d_banned_users')) || [];
+            bannedList = bannedList.filter(u => u !== targetName);
+            localStorage.setItem('craftino_3d_banned_users', JSON.stringify(bannedList));
+            chatChannel.postMessage({ type: 'UNBAN_USER', targetName: targetName });
+            renderAdvancedManagementPanel();
+        };
+
+        function initApp() {
+            document.getElementById('headerUserAvatar').src = currentUser.avatar;
+            document.getElementById('headerUserName').textContent = currentUser.name;
+            currentUser.lastActive = Date.now();
+            updateOnlineUsersList(currentUser, true);
+            updateOnlineUsersList(craftoSysBot, true);
+
+            chatChannel.postMessage({ type: 'JOIN', user: currentUser });
+            chatChannel.postMessage({ type: 'JOIN', user: craftoSysBot });
+
+            updateNotificationBadgeUI(); // تحديث شارة الإشعارات عند البدء
+
+            setInterval(() => {
+                currentUser.lastActive = Date.now();
+                craftoSysBot.lastActive = Date.now();
+                updateOnlineUsersList(currentUser, true);
+                updateOnlineUsersList(craftoSysBot, true);
+                chatChannel.postMessage({ type: 'PING', user: currentUser });
+                chatChannel.postMessage({ type: 'PING', user: craftoSysBot });
+            }, 5000);
+        }
+
+        const messageInput = document.getElementById('messageInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const chatMessages = document.getElementById('chatMessages');
+        const replyPreviewBar = document.getElementById('replyPreviewBar');
+        const replyTargetUser = document.getElementById('replyTargetUser');
+        const replyTargetText = document.getElementById('replyTargetText');
+        const cancelReplyBtn = document.getElementById('cancelReplyBtn');
+        const mentionDropdown = document.getElementById('mentionDropdown');
+
+        cancelReplyBtn.addEventListener('click', () => {
+            currentReplyingTo = null;
+            replyPreviewBar.classList.remove('active');
+        });
+
+        function sendMessageHandler() {
+            let bannedList = JSON.parse(localStorage.getItem('craftino_3d_banned_users')) || [];
+            if (bannedList.includes(currentUser.name)) {
+                bannedOverlay.classList.add('active');
+                return;
+            }
+
+            let text = messageInput.value.trim();
+            if (!text) return;
+
+            let msgData = {
+                id: 'msg_' + Date.now() + '_' + Math.random(),
+                type: 'TEXT',
+                user: currentUser,
+                content: text,
+                targetPrivateTo: currentPrivateChatWith, 
+                replyTo: currentReplyingTo ? { user: currentReplyingTo.user.name, content: currentReplyingTo.content } : null,
+                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            };
+
+            if (currentPrivateChatWith) {
+                saveNotification(currentPrivateChatWith, currentUser.name, text);
+            }
+
+            appendMessage(msgData, true);
+            chatChannel.postMessage(msgData);
+            
+            currentReplyingTo = null;
+            replyPreviewBar.classList.remove('active');
+            messageInput.value = '';
+            mentionDropdown.classList.remove('active');
+            messageInput.focus();
+        }
+
+        function saveNotification(recipientName, senderName, messageText) {
+            if (recipientName === senderName) return;
+            let allNotifs = JSON.parse(localStorage.getItem('craftino_notifications')) || {};
+            if (!allNotifs[recipientName]) { allNotifs[recipientName] = []; }
+            allNotifs[recipientName].unshift({
+                sender: senderName,
+                text: messageText,
+                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            });
+            localStorage.setItem('craftino_notifications', JSON.stringify(allNotifs));
+            updateNotificationBadgeUI();
+        }
+
+        // دالة تحديث عداد شارة الأرقام الحمراء فوق زر الإشعارات حسب المنشن / الإشعارات الواردة
+        function updateNotificationBadgeUI() {
+            let allNotifs = JSON.parse(localStorage.getItem('craftino_notifications')) || {};
+            let myNotifs = allNotifs[currentUser.name] || [];
+            let badgeEl = document.getElementById('notifBadgeCounter');
+            
+            if (myNotifs.length > 0) {
+                badgeEl.textContent = myNotifs.length;
+                badgeEl.classList.add('active');
+            } else {
+                badgeEl.textContent = '0';
+                badgeEl.classList.remove('active');
+            }
+        }
+
+        sendBtn.addEventListener('click', sendMessageHandler);
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') { e.preventDefault(); sendMessageHandler(); }
+        });
+
+        function triggerSystemNotice(noticeText) {
+            let noticeDiv = document.createElement('div');
+            noticeDiv.className = 'message incoming';
+            noticeDiv.style.background = '#fef3c7';
+            noticeDiv.style.color = '#92400e';
+            noticeDiv.style.border = '1px solid #fde68a';
+            noticeDiv.style.margin = '0 auto';
+            noticeDiv.style.textAlign = 'center';
+            noticeDiv.innerHTML = `<i class="fa-solid fa-circle-info"></i> ${noticeText}`;
+            chatMessages.appendChild(noticeDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        const attachBtn = document.getElementById('attachBtn');
+        const fileInput = document.getElementById('fileInput');
+
+        attachBtn.addEventListener('click', () => fileInput.click());
+
+        fileInput.addEventListener('change', (e) => {
+            let file = e.target.files[0];
+            if (!file) return;
+            let reader = new FileReader();
+            reader.onload = function(event) {
+                let fileType = file.type.startsWith('video') ? 'VIDEO' : 'IMAGE';
+                let msgData = {
+                    id: 'msg_' + Date.now() + '_' + Math.random(),
+                    type: fileType,
+                    user: currentUser,
+                    content: event.target.result,
+                    targetPrivateTo: currentPrivateChatWith,
+                    replyTo: currentReplyingTo ? { user: currentReplyingTo.user.name, content: currentReplyingTo.content } : null,
+                    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                };
+                if (currentPrivateChatWith) saveNotification(currentPrivateChatWith, currentUser.name, '[ملف مرفق]');
+                appendMessage(msgData, true);
+                chatChannel.postMessage(msgData);
+                currentReplyingTo = null;
+                replyPreviewBar.classList.remove('active');
+                fileInput.value = '';
+            };
+            reader.readAsDataURL(file);
+        });
+
+        chatChannel.onmessage = function(event) {
+            let data = event.data;
+            if (!data) return;
+
+            if (data.type === 'BAN_USER' && data.targetName === currentUser.name) {
+                bannedOverlay.classList.add('active');
+            } else if (data.type === 'TEXT' || data.type === 'IMAGE' || data.type === 'VIDEO' || data.type === 'AUDIO') {
+                let blockedList = getMyBlockedUsers();
+                if (blockedList.includes(data.user.name)) return;
+
+                // التحقق مما إذا كان تم منشن المستخدم في الرسالة أو الشات الخاص
+                let isMentioned = data.content && data.content.includes(`@${currentUser.name}`);
+                if (isMentioned && data.user.name !== currentUser.name) {
+                    saveNotification(currentUser.name, data.user.name, `قامت بالإشارة إليك: ${data.content}`);
+                }
+
+                if (data.targetPrivateTo === currentUser.name) {
+                    saveNotification(currentUser.name, data.user.name, data.content);
+                    if (currentPrivateChatWith === data.user.name) {
+                        appendMessage(data, false);
+                    }
+                } else if (!data.targetPrivateTo && !currentPrivateChatWith) {
+                    appendMessage(data, false);
+                }
+            } else if (data.type === 'DELETE_MSG') {
+                let msgElement = document.querySelector(`[data-id="${data.msgId}"]`);
+                if (msgElement) {
+                    msgElement.classList.add('fade-out');
+                    setTimeout(() => msgElement.remove(), 400);
+                }
+            } else if (data.type === 'JOIN' || data.type === 'UPDATE_PROFILE' || data.type === 'PING') {
+                updateOnlineUsersList(data.user, true);
+            }
+        };
+
+        function appendMessage(data, isMe) {
+            if (currentPrivateChatWith) {
+                if (data.targetPrivateTo !== currentPrivateChatWith && data.user.name !== currentPrivateChatWith && !isMe) return;
+                if (isMe && data.targetPrivateTo !== currentPrivateChatWith) return;
+            } else {
+                if (data.targetPrivateTo && data.targetPrivateTo !== currentUser.name && !isMe) return;
+            }
+
+            let msgDiv = document.createElement('div');
+            msgDiv.className = `message ${isMe ? 'outgoing' : 'incoming'}`;
+            msgDiv.setAttribute('data-id', data.id);
+
+            let roleBadgeClass = 'member', roleName = 'عضو';
+            if (data.user.role === 'owner') { roleBadgeClass = 'owner'; roleName = 'Owner'; }
+            else if (data.user.role === 'admin') { roleBadgeClass = 'admin'; roleName = 'Admin'; }
+            else if (data.user.role === 'system') { roleBadgeClass = 'system'; roleName = 'Crafto Sys'; }
+
+            let canDelete = isMe || currentUser.role === 'owner' || currentUser.name === data.user.name;
+            let deleteBtnHtml = canDelete ? `<button type="button" class="msg-delete-btn" onclick="deleteMessage('${data.id}')"><i class="fa-solid fa-trash-can"></i></button>` : '';
+            let replyBtnHtml = `<button type="button" class="msg-reply-btn" onclick='prepareReply(${JSON.stringify(data.user.name)}, ${JSON.stringify(data.type === 'TEXT' ? data.content : '[' + data.type + ']')})'><i class="fa-solid fa-reply"></i></button>`;
+
+            let replyHtml = data.replyTo ? `
+                <div class="reply-quote-box">
+                    <span class="reply-quote-user">${escapeHtml(data.replyTo.user)}</span>
+                    <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(data.replyTo.content)}</span>
+                </div>
+            ` : '';
+
+            let innerHTML = `
+                ${replyHtml}
+                <div class="msg-header-line">
+                    <div class="msg-user-info" onclick="openUserProfileByName('${escapeHtml(data.user.name)}')">
+                        <img src="${data.user.avatar || 'https://api.dicebear.com/7.x/bottts/svg?seed=default'}" class="msg-avatar">
+                        <span class="msg-user">${escapeHtml(data.user.name)}</span>
+                        <span class="badge ${roleBadgeClass}">${roleName}</span>
+                        ${data.targetPrivateTo ? '<span style="font-size:0.7em; background:#0284c7; color:#fff; padding:1px 5px; border-radius:4px;">خاص</span>' : ''}
+                    </div>
+                    <div class="msg-actions-group">${replyBtnHtml}${deleteBtnHtml}</div>
+                </div>
+            `;
+
+            if (data.type === 'TEXT') {
+                let formattedContent = escapeHtml(data.content).replace(/\n/g, '<br>');
+                innerHTML += `<div>${formattedContent}</div>`;
+            } else if (data.type === 'IMAGE') {
+                innerHTML += `<img src="${data.content}" class="msg-media-img" onclick="openPreview('${data.content}')">`;
+            } else if (data.type === 'VIDEO') {
+                innerHTML += `<video src="${data.content}" controls class="msg-media-video"></video>`;
+            } else if (data.type === 'AUDIO') {
+                innerHTML += `<audio src="${data.content}" controls class="msg-audio"></audio>`;
+            }
+
+            innerHTML += `<div class="msg-time">${data.time}</div>`;
+            msgDiv.innerHTML = innerHTML;
+            chatMessages.appendChild(msgDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        window.prepareReply = function(username, textContent) {
+            currentReplyingTo = { user: { name: username }, content: textContent };
+            replyTargetUser.textContent = username;
+            replyTargetText.textContent = textContent;
+            replyPreviewBar.classList.add('active');
+            messageInput.focus();
+        };
+
+        window.deleteMessage = function(msgId) {
+            let msgElement = document.querySelector(`[data-id="${msgId}"]`);
+            if (msgElement) {
+                msgElement.classList.add('fade-out');
+                setTimeout(() => msgElement.remove(), 400);
+            }
+            chatChannel.postMessage({ type: 'DELETE_MSG', msgId: msgId });
+        };
+
+        const profileModal = document.getElementById('profileModal');
+        const openProfileBtn = document.getElementById('openProfileBtn');
+        const closeProfileBtn = document.getElementById('closeProfileBtn');
+        const saveProfileBtn = document.getElementById('saveProfileBtn');
+        const editNameInput = document.getElementById('editNameInput');
+        const editBioInput = document.getElementById('editBioInput');
+        const editCustomAvatarFile = document.getElementById('editCustomAvatarFile');
+        const startPrivateChatBtn = document.getElementById('startPrivateChatBtn');
+        const toggleBlockUserBtn = document.getElementById('toggleBlockUserBtn');
+        let newProfileAvatar = '';
+
+        openProfileBtn.addEventListener('click', () => {
+            editNameInput.value = currentUser.name;
+            editBioInput.value = currentUser.bio;
+            newProfileAvatar = currentUser.avatar;
+            document.getElementById('profileModalAvatar').src = currentUser.avatar;
+            document.getElementById('profileModalTitle').textContent = currentUser.name;
+            document.getElementById('profileModalBioText').style.display = 'none';
+            document.getElementById('profileEditNameGroup').style.display = 'block';
+            document.getElementById('profileEditBioGroup').style.display = 'block';
+            document.getElementById('profileEditImageDiv').style.display = 'block';
+            saveProfileBtn.style.display = 'block';
+            startPrivateChatBtn.style.display = 'none';
+            toggleBlockUserBtn.style.display = 'none';
+            profileModal.classList.add('active');
+        });
+
+        window.openUserProfileByName = function(userName) {
+            let activeUsers = JSON.parse(localStorage.getItem('craftino_3d_active_users')) || [];
+            let targetUser = activeUsers.find(u => u.name === userName) || { name: userName, avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=' + userName, role: 'member', bio: 'مستخدم نشط بالسيرفر' };
+
+            if (targetUser.name === currentUser.name) { openProfileBtn.click(); return; }
+
+            document.getElementById('profileModalAvatar').src = targetUser.avatar;
+            document.getElementById('profileModalTitle').textContent = targetUser.name;
+            document.getElementById('profileModalBioText').textContent = targetUser.bio || 'لا يوجد نبذة.';
+            document.getElementById('profileModalBioText').style.display = 'block';
+            
+            document.getElementById('profileEditNameGroup').style.display = 'none';
+            document.getElementById('profileEditBioGroup').style.display = 'none';
+            document.getElementById('profileEditImageDiv').style.display = 'none';
+            saveProfileBtn.style.display = 'none';
+
+            let roleBadgeHtml = `<span class="badge ${targetUser.role}">${targetUser.role}</span>`;
+            document.getElementById('profileModalRoleBadge').innerHTML = roleBadgeHtml;
+
+            startPrivateChatBtn.style.display = 'block';
+            startPrivateChatBtn.onclick = () => {
+                currentPrivateChatWith = targetUser.name;
+                profileModal.classList.remove('active');
+                
+                document.getElementById('chatRoomTitleText').querySelector('span').textContent = `محادثة خاصة: ${targetUser.name}`;
+                document.getElementById('backToGeneralBtn').classList.add('active');
+                
+                chatMessages.innerHTML = '';
+                triggerSystemNotice(`🔒 واجهة الرسائل الخاصة مع (${targetUser.name}).`);
+            };
+
+            let blockedList = getMyBlockedUsers();
+            let isBlocked = blockedList.includes(targetUser.name);
+            toggleBlockUserBtn.style.display = 'block';
+            toggleBlockUserBtn.innerHTML = isBlocked ? `<i class="fa-solid fa-user-check"></i> إلغاء الحظر (Unblock)` : `<i class="fa-solid fa-user-slash"></i> حظر المستخدم (Block)`;
+            toggleBlockUserBtn.onclick = () => toggleBlockUser(targetUser.name);
+
+            profileModal.classList.add('active');
+        };
+
+        window.exitPrivateChat = function() {
+            currentPrivateChatWith = null;
+            document.getElementById('chatRoomTitleText').querySelector('span').textContent = `غرفة Craftino 3D العامة`;
+            document.getElementById('backToGeneralBtn').classList.remove('active');
+            chatMessages.innerHTML = '';
+            triggerSystemNotice(`🌐 عدت إلى غرفة الشات العامة.`);
+        };
+
+        closeProfileBtn.addEventListener('click', () => profileModal.classList.remove('active'));
+
+        editCustomAvatarFile.addEventListener('change', (e) => {
+            let file = e.target.files[0];
+            if (!file) return;
+            compressImage(file, (compressedUrl) => {
+                newProfileAvatar = compressedUrl;
+                document.getElementById('profileModalAvatar').src = newProfileAvatar;
+            });
+        });
+
+        saveProfileBtn.addEventListener('click', () => {
+            let newName = editNameInput.value.trim();
+            if (!newName) { alert('الاسم مطلوب!'); return; }
+            currentUser.name = newName;
+            currentUser.bio = editBioInput.value.trim();
+            currentUser.avatar = newProfileAvatar;
+            currentUser.lastActive = Date.now();
+
+            localStorage.setItem('craftino_3d_user', JSON.stringify(currentUser));
+            document.getElementById('headerUserName').textContent = currentUser.name;
+            document.getElementById('headerUserAvatar').src = currentUser.avatar;
+            profileModal.classList.remove('active');
+            chatChannel.postMessage({ type: 'UPDATE_PROFILE', user: currentUser });
+        });
+
+        const openNotificationsBtn = document.getElementById('openNotificationsBtn');
+        const notificationsModal = document.getElementById('notificationsModal');
+        const closeNotificationsModalBtn = document.getElementById('closeNotificationsModalBtn');
+        const notificationsListContainer = document.getElementById('notificationsListContainer');
+
+        openNotificationsBtn.addEventListener('click', () => {
+            let allNotifs = JSON.parse(localStorage.getItem('craftino_notifications')) || {};
+            let myNotifs = allNotifs[currentUser.name] || [];
+            notificationsListContainer.innerHTML = '';
+            
+            if (myNotifs.length === 0) {
+                notificationsListContainer.innerHTML = `<li style="text-align: center; color: var(--muted-color); padding: 20px;">لا توجد إشعارات حالياً.</li>`;
+            } else {
+                myNotifs.forEach(n => {
+                    let li = document.createElement('li');
+                    li.className = 'notification-item';
+                    li.innerHTML = `
+                        <div>
+                            <strong style="color: var(--primary-color);">${escapeHtml(n.sender)}</strong>: <span>${escapeHtml(n.text)}</span>
+                            <div style="font-size: 0.75em; color: var(--muted-color);">${n.time}</div>
+                        </div>
+                        <button class="control-btn" style="padding: 4px 10px; font-size: 0.8em;" onclick="openUserProfileByName('${escapeHtml(n.sender)}')">فتح</button>
+                    `;
+                    notificationsListContainer.appendChild(li);
+                });
+            }
+
+            // عند فتح قائمة الإشعارات، يتم مسح الإشعارات وتصفير العداد الأحمر
+            allNotifs[currentUser.name] = [];
+            localStorage.setItem('craftino_notifications', JSON.stringify(allNotifs));
+            updateNotificationBadgeUI();
+
+            notificationsModal.classList.add('active');
+        });
+
+        closeNotificationsModalBtn.addEventListener('click', () => notificationsModal.classList.remove('active'));
+
+        const onlineUsersList = document.getElementById('onlineUsersList');
+        const onlineCountBadge = document.getElementById('onlineCountBadge');
+        const totalCountBadge = document.getElementById('totalCountBadge');
+
+        function updateOnlineUsersList(userObj, isAdd) {
+            let bannedList = JSON.parse(localStorage.getItem('craftino_3d_banned_users')) || [];
+            if (bannedList.includes(userObj.name)) return;
+
+            let users = JSON.parse(localStorage.getItem('craftino_3d_active_users')) || [];
+            let index = users.findIndex(u => u.name === userObj.name);
+            if (index !== -1) {
+                users[index] = userObj;
+                users[index].lastActive = userObj.lastActive || Date.now();
+            } else if (isAdd) {
+                userObj.lastActive = userObj.lastActive || Date.now();
+                users.push(userObj);
+            }
+            localStorage.setItem('craftino_3d_active_users', JSON.stringify(users));
+            renderOnlineUsers(users);
+        }
+
+        function removeUserFromOnlineList(targetName) {
+            let users = JSON.parse(localStorage.getItem('craftino_3d_active_users')) || [];
+            users = users.filter(u => u.name !== targetName);
+            localStorage.setItem('craftino_3d_active_users', JSON.stringify(users));
+            renderOnlineUsers(users);
+        }
+
+        function renderOnlineUsers(users) {
+            let bannedList = JSON.parse(localStorage.getItem('craftino_3d_banned_users')) || [];
+            let blockedList = getMyBlockedUsers();
+            onlineUsersList.innerHTML = '';
+            
+            let currentTime = Date.now();
+            let onlineUsers = users.filter(u => !bannedList.includes(u.name) && !blockedList.includes(u.name) && (currentTime - (u.lastActive || 0) < 15000));
+            let offlineUsers = users.filter(u => !bannedList.includes(u.name) && !blockedList.includes(u.name) && (currentTime - (u.lastActive || 0) >= 15000));
+
+            onlineCountBadge.textContent = onlineUsers.length;
+            totalCountBadge.textContent = users.length;
+
+            if (onlineUsers.length > 0) {
+                let onlineHeader = document.createElement('div');
+                onlineHeader.className = 'user-group-title';
+                onlineHeader.innerHTML = `<i class="fa-solid fa-circle" style="font-size: 6px; color: #10b981;"></i> أونلاين — ${onlineUsers.length}`;
+                onlineUsersList.appendChild(onlineHeader);
+                onlineUsers.forEach(u => appendUserItem(u, true));
+            }
+
+            if (offlineUsers.length > 0) {
+                let offlineHeader = document.createElement('div');
+                offlineHeader.className = 'user-group-title';
+                offlineHeader.style.marginTop = '16px';
+                offlineHeader.innerHTML = `<i class="fa-solid fa-circle" style="font-size: 6px; color: #94a3b8;"></i> أوفلاين — ${offlineUsers.length}`;
+                onlineUsersList.appendChild(offlineHeader);
+                offlineUsers.forEach(u => appendUserItem(u, false));
+            }
+        }
+
+        function appendUserItem(u, isOnline) {
+            let li = document.createElement('li');
+            li.className = `online-user-item ${!isOnline ? 'offline-user' : ''}`;
+            li.onclick = () => openUserProfileByName(u.name);
+
+            li.innerHTML = `
+                <div class="user-main-info">
+                    <img src="${u.avatar || 'https://api.dicebear.com/7.x/bottts/svg?seed=default'}" class="user-avatar-small">
+                    <span class="status-dot ${isOnline ? 'online' : 'offline'}"></span>
+                    <div class="user-info-text">
+                        <div class="user-name-role">
+                            <strong>${escapeHtml(u.name)}</strong>
+                            <span class="badge ${u.role}">${u.role}</span>
+                        </div>
+                        <div style="font-size: 0.7em; color: var(--muted-color);">${escapeHtml(u.bio || '')}</div>
+                    </div>
+                </div>
+            `;
+            onlineUsersList.appendChild(li);
+        }
+
+        const mediaPreviewModal = document.getElementById('mediaPreviewModal');
+        const modalImagePreview = document.getElementById('modalImagePreview');
+        const closePreviewBtn = document.getElementById('closePreviewBtn');
+
+        window.openPreview = function(src) {
+            modalImagePreview.src = src;
+            mediaPreviewModal.classList.add('active');
+        }
+        closePreviewBtn.addEventListener('click', () => mediaPreviewModal.classList.remove('active'));
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            return text.toString().replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        }
+    </script>
+</body>
+</html>
