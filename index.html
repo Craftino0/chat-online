@@ -23,7 +23,6 @@
             --blur-intensity: 15px;
         }
 
-        /* وضع الأداء الخفيف عند انخفاض الـ FPS */
         body.low-performance * {
             backdrop-filter: none !important;
             box-shadow: none !important;
@@ -48,7 +47,6 @@
             perspective: 1200px;
         }
 
-        /* نافذة الإعداد الإجبارية قبل الدخول */
         .setup-overlay {
             position: fixed;
             top: 0;
@@ -186,7 +184,6 @@
             opacity: 0.95;
         }
 
-        /* هيكل تطبيق الشات */
         .chat-app {
             display: flex;
             width: 100vw;
@@ -195,7 +192,6 @@
             transform-style: preserve-3d;
         }
 
-        /* الشريط الجانبي */
         .sidebar {
             width: 300px;
             background: var(--card-bg);
@@ -399,7 +395,6 @@
             box-shadow: 0 8px 20px rgba(245, 158, 11, 0.5);
         }
 
-        /* منطقة المحادثة */
         .chat-main {
             flex: 1;
             display: flex;
@@ -477,7 +472,6 @@
             color: white !important;
         }
 
-        /* تنسيق الروابط داخل الرسائل لكي تكون قابلة للنقر */
         .message a {
             color: #38bdf8;
             text-decoration: underline;
@@ -486,11 +480,7 @@
         .message.incoming a {
             color: #0284c7;
         }
-        .message a:hover {
-            opacity: 0.8;
-        }
 
-        /* صندوق الرسائل */
         .chat-messages {
             flex: 1;
             padding: 25px;
@@ -997,7 +987,6 @@
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
 
-        /* استجابة ديناميكية حسب حجم الشاشة والجهاز تلقائياً */
         @media (max-width: 900px) {
             .sidebar { width: 240px; padding: 12px; }
             .message { max-width: 80%; }
@@ -1010,7 +999,6 @@
             .message { max-width: 90%; }
         }
 
-        /* ===== Automatic responsive sizing ===== */
         :root {
             --ui-scale: 1;
         }
@@ -1075,26 +1063,12 @@
             transform-style: flat !important;
         }
 
-        @media (max-width: 900px) {
-            .sidebar { width: 240px; padding: 12px; }
-            .message { max-width: 80%; }
-        }
-
-        @media (max-width: 650px) {
-            .sidebar { display: none; }
-            .chat-header { padding: 0 15px; }
-            .chat-input-area { padding: 12px 15px; }
-            .message { max-width: 90%; }
-        }
-
-
         .global-connection-note {
             margin-top: 12px;
             font-size: 0.72em;
             color: var(--muted-color);
             line-height: 1.5;
         }
-
     </style>
 </head>
 <body>
@@ -1275,7 +1249,13 @@
     </div>
 
     <script>
-        // --- نظام الأداء التلقائي: حجم الشاشة + قدرات الجهاز + FPS ---
+        // حذف جميع البيانات المحلية القديمة تماماً ليعود الموقع كأنه جديد تماماً
+        localStorage.removeItem('craftino_3d_user');
+        localStorage.removeItem('craftino_persistent_messages');
+        localStorage.removeItem('craftino_3d_active_users');
+        localStorage.removeItem('craftino_notifications');
+        localStorage.removeItem('craftino_chat_locked');
+
         const performanceState = {
             tier: 'auto',
             fps: 60,
@@ -1310,46 +1290,13 @@
             if (weakHardware || area < 900000) {
                 document.body.classList.add('low-performance');
             }
-
-            updatePerformanceLabel();
-        }
-
-        function updatePerformanceLabel() {
-            document.documentElement.style.setProperty('--device-width', `${performanceState.width}px`);
         }
 
         applyDeviceProfile();
         window.addEventListener('resize', applyDeviceProfile, { passive: true });
-        window.addEventListener('orientationchange', () => setTimeout(applyDeviceProfile, 250), { passive: true });
-
-        let fpsFrames = 0;
-        let lastFpsCheck = performance.now();
-        let lastFrameTime = performance.now();
-
-        function monitorSystemFPS(now) {
-            fpsFrames++;
-            lastFrameTime = now;
-
-            if (now - lastFpsCheck >= 1500) {
-                const fps = (fpsFrames * 1000) / (now - lastFpsCheck);
-                performanceState.fps = Math.round(fps);
-
-                if (fps < 55) {
-                    document.body.classList.add('low-performance');
-                } else if (fps >= 59 && performanceState.cores >= 6 && performanceState.memory >= 6) {
-                    document.body.classList.remove('low-performance');
-                }
-
-                fpsFrames = 0;
-                lastFpsCheck = now;
-            }
-
-            requestAnimationFrame(monitorSystemFPS);
-        }
-        requestAnimationFrame(monitorSystemFPS);
 
         // ============================================================
-        // FIREBASE REALTIME DATABASE CONFIG (الغرفة العالمية التلقائية)
+        // FIREBASE REALTIME DATABASE CONFIG (الغرفة العالمية التلقائية الموحدة)
         // ============================================================
         const FIREBASE_CONFIG = {
             apiKey: "PUT_YOUR_FIREBASE_API_KEY_HERE",
@@ -1472,7 +1419,6 @@
                     const u = child.val();
                     if (u && u.name) all.push(u);
                 });
-                localStorage.setItem('craftino_3d_active_users', JSON.stringify(all));
                 renderOnlineUsers(all);
             });
 
@@ -1636,24 +1582,8 @@
             return false;
         }
 
+        // إجبار ظهور شاشة الإعداد ليدخل العضو كأنه جديد تماماً
         window.addEventListener('DOMContentLoaded', () => {
-            const savedUserJSON = localStorage.getItem('craftino_3d_user');
-            if (savedUserJSON) {
-                try {
-                    let parsedUser = JSON.parse(savedUserJSON);
-                    if (parsedUser && parsedUser.name && parsedUser.name.trim() !== "") {
-                        currentUser = parsedUser;
-                        if (!checkBannedStatus(currentUser.name)) {
-                            setupOverlay.classList.add('hidden');
-                            initApp();
-                            loadSavedMessages();
-                            return;
-                        }
-                    }
-                } catch (err) {
-                    localStorage.removeItem('craftino_3d_user');
-                }
-            }
             setupOverlay.classList.remove('hidden');
         });
 
